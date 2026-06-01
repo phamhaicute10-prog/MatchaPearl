@@ -1,43 +1,44 @@
 const db = require('../config/db');
 
 class ProductModel {
-    static async getAllCategories() {
-        const [rows] = await db.query('SELECT * FROM Categories');
+    static async getAllCategories(userId) {
+        const [rows] = await db.query('SELECT * FROM Categories WHERE UserID = ?', [userId]);
         return rows;
     }
 
-    static async getAllProducts() {
-        const [rows] = await db.query('SELECT * FROM Products WHERE Status != -1 OR Status IS NULL');
+    static async getAllProducts(userId) {
+        const [rows] = await db.query('SELECT * FROM Products WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
         return rows;
     }
 
-    static async getAvailableProducts() {
-        const [rows] = await db.query('SELECT * FROM Products WHERE Status = 1');
+    static async getAvailableProducts(userId) {
+        const [rows] = await db.query('SELECT * FROM Products WHERE UserID = ? AND Status = 1', [userId]);
         return rows;
     }
 
-    static async getAllToppings() {
-        const [rows] = await db.query('SELECT * FROM Toppings');
+    static async getAllToppings(userId) {
+        const [rows] = await db.query('SELECT * FROM Toppings WHERE UserID = ?', [userId]);
         return rows;
     }
 
-    static async createProduct(productData) {
+    static async createProduct(productData, userId) {
         const { CategoryID, ProductName, Price, Description, ImageURL, Status } = productData;
         const [result] = await db.query(
-            'INSERT INTO Products (CategoryID, ProductName, BasePrice, Description, Image, Status) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO Products (CategoryID, ProductName, BasePrice, Description, Image, Status, UserID) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
                 CategoryID, 
                 ProductName, 
                 Price, 
                 Description || null, 
                 ImageURL || null,
-                (Status !== undefined && Status !== null) ? Status : 1
+                (Status !== undefined && Status !== null) ? Status : 1,
+                userId
             ]
         );
         return result.insertId;
     }
 
-    static async updateProduct(id, productData) {
+    static async updateProduct(id, productData, userId) {
         const { CategoryID, ProductName, Price, Description, ImageURL, Status } = productData;
         let query = 'UPDATE Products SET CategoryID = ?, ProductName = ?, BasePrice = ?, Description = ?, Status = ?';
         let params = [CategoryID, ProductName, Price, Description, Status];
@@ -47,8 +48,8 @@ class ProductModel {
             params.push(ImageURL);
         }
 
-        query += ' WHERE ProductID = ?';
-        params.push(id);
+        query += ' WHERE ProductID = ? AND UserID = ?';
+        params.push(id, userId);
 
         console.log('--- DATABASE UPDATE DEBUG ---');
         console.log('Query:', query);
@@ -59,31 +60,31 @@ class ProductModel {
         return result.affectedRows;
     }
 
-    static async deleteProduct(id) {
+    static async deleteProduct(id, userId) {
         try {
-            const [result] = await db.query('DELETE FROM Products WHERE ProductID = ?', [id]);
+            const [result] = await db.query('DELETE FROM Products WHERE ProductID = ? AND UserID = ?', [id, userId]);
             return result.affectedRows;
         } catch (error) {
             // ER_ROW_IS_REFERENCED_2 means it is used in another table (e.g. OrderItems)
             if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.errno === 1451) {
                 console.log(`Product ${id} is referenced in an order. Soft deleting...`);
-                const [result] = await db.query('UPDATE Products SET Status = -1 WHERE ProductID = ?', [id]);
+                const [result] = await db.query('UPDATE Products SET Status = -1 WHERE ProductID = ? AND UserID = ?', [id, userId]);
                 return result.affectedRows;
             }
             throw error;
         }
     }
 
-    static async createTopping(toppingData) {
-        const { ToppingName, Price, Description, ImageURL, UserID, Status } = toppingData;
+    static async createTopping(toppingData, userId) {
+        const { ToppingName, Price, Description, ImageURL, Status } = toppingData;
         const [result] = await db.query(
             'INSERT INTO Toppings (ToppingName, Price, Description, Image, UserID, Status) VALUES (?, ?, ?, ?, ?, ?)',
-            [ToppingName, Price, Description || null, ImageURL || null, UserID || 2, (Status !== undefined && Status !== null) ? Status : 1]
+            [ToppingName, Price, Description || null, ImageURL || null, userId, (Status !== undefined && Status !== null) ? Status : 1]
         );
         return result.insertId;
     }
 
-    static async updateTopping(id, toppingData) {
+    static async updateTopping(id, toppingData, userId) {
         const { ToppingName, Price, Description, ImageURL, Status } = toppingData;
         let query = 'UPDATE Toppings SET ToppingName = ?, Price = ?, Description = ?, Status = ?';
         let params = [ToppingName, Price, Description || null, Status !== undefined ? Status : 1];
@@ -93,15 +94,15 @@ class ProductModel {
             params.push(ImageURL);
         }
 
-        query += ' WHERE ToppingID = ?';
-        params.push(id);
+        query += ' WHERE ToppingID = ? AND UserID = ?';
+        params.push(id, userId);
 
         const [result] = await db.query(query, params);
         return result.affectedRows;
     }
 
-    static async deleteTopping(id) {
-        const [result] = await db.query('DELETE FROM Toppings WHERE ToppingID = ?', [id]);
+    static async deleteTopping(id, userId) {
+        const [result] = await db.query('DELETE FROM Toppings WHERE ToppingID = ? AND UserID = ?', [id, userId]);
         return result.affectedRows;
     }
 }

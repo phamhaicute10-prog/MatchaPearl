@@ -22,6 +22,9 @@ const upload = multer({ storage: storage });
 
 // Auth Routes
 router.post('/login', authController.login);
+router.post('/register', authController.register);
+router.put('/update-profile', authController.updateProfile);
+router.post('/forgot-password', authController.forgotPassword);
 
 // Product Routes
 router.get('/categories', productController.getCategories);

@@ -54,7 +54,7 @@ class OrderModel {
         }
     }
 
-    static async getOrders(filters = {}) {
+    static async getOrders(filters = {}, userId) {
         try {
             let { page = 1, limit = 10, status, startDate, endDate, search } = filters;
             page = parseInt(page) || 1;
@@ -63,9 +63,9 @@ class OrderModel {
             let baseQuery = `
                 FROM Orders o 
                 LEFT JOIN Users u ON o.UserID = u.UserID 
-                WHERE 1=1
+                WHERE o.UserID = ?
             `;
-            const queryParams = [];
+            const queryParams = [userId];
 
             if (status && status !== 'Tất cả trạng thái' && status !== 'Tất cả') {
                 let statusVal = status;
@@ -113,14 +113,14 @@ class OrderModel {
         }
     }
 
-    static async getOrderDetails(orderId) {
+    static async getOrderDetails(orderId, userId) {
         try {
             const [orders] = await db.query(`
                 SELECT o.*, u.FullName as CashierName 
                 FROM Orders o 
                 LEFT JOIN Users u ON o.UserID = u.UserID 
-                WHERE o.OrderID = ?
-            `, [orderId]);
+                WHERE o.OrderID = ? AND o.UserID = ?
+            `, [orderId, userId]);
             
             if (orders.length === 0) return null;
             const order = orders[0];
@@ -155,11 +155,11 @@ class OrderModel {
             throw err;
         }
     }
-    static async updateOrderStatus(orderId, status) {
+    static async updateOrderStatus(orderId, status, userId) {
         try {
             const [result] = await db.query(
-                "UPDATE Orders SET Status = ? WHERE OrderID = ?",
-                [status, orderId]
+                "UPDATE Orders SET Status = ? WHERE OrderID = ? AND UserID = ?",
+                [status, orderId, userId]
             );
             return result.affectedRows > 0;
         } catch (err) {
@@ -167,11 +167,11 @@ class OrderModel {
         }
     }
 
-    static async cancelOrder(orderId) {
+    static async cancelOrder(orderId, userId) {
         try {
             const [result] = await db.query(
-                "UPDATE Orders SET Status = 'CANCELLED' WHERE OrderID = ?",
-                [orderId]
+                "UPDATE Orders SET Status = 'CANCELLED' WHERE OrderID = ? AND UserID = ?",
+                [orderId, userId]
             );
             return result.affectedRows > 0;
         } catch (err) {

@@ -14,8 +14,8 @@ exports.getDashboardData = async (req, res) => {
             const [orders] = await db.query(`
                 SELECT TotalAmount 
                 FROM Orders 
-                WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt <= ?
-            `, [start, end]);
+                WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt <= ? AND UserID = ?
+            `, [start, end, req.userId]);
 
             let totalRevenue = 0;
             for (const order of orders) {
@@ -37,8 +37,8 @@ exports.getDashboardData = async (req, res) => {
                 const [dayOrders] = await db.query(`
                     SELECT SUM(TotalAmount) as revenue
                     FROM Orders
-                    WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt < ?
-                `, [d, nextD]);
+                    WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt < ? AND UserID = ?
+                `, [d, nextD, req.userId]);
                 
                 const revenue = dayOrders[0].revenue ? parseFloat(dayOrders[0].revenue) : 0;
                 const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -56,11 +56,11 @@ exports.getDashboardData = async (req, res) => {
                 LEFT JOIN Products p ON oi.ProductID = p.ProductID
                 LEFT JOIN OrderItemToppings oit ON oi.OrderItemID = oit.OrderItemID AND oi.ProductID IS NULL
                 LEFT JOIN Toppings t ON oit.ToppingID = t.ToppingID
-                WHERE o.Status = 'COMPLETED' AND o.CreatedAt >= ? AND o.CreatedAt <= ?
+                WHERE o.Status = 'COMPLETED' AND o.CreatedAt >= ? AND o.CreatedAt <= ? AND o.UserID = ?
                 GROUP BY ItemName
                 ORDER BY TotalSold DESC
                 LIMIT 5
-            `, [start, end]);
+            `, [start, end, req.userId]);
 
             return res.status(200).json({
                 success: true,
@@ -87,8 +87,8 @@ exports.getDashboardData = async (req, res) => {
         const [orders] = await db.query(`
             SELECT TotalAmount, CreatedAt
             FROM Orders 
-            WHERE Status = 'COMPLETED' AND CreatedAt >= ?
-        `, [startOfMonth]);
+            WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND UserID = ?
+        `, [startOfMonth, req.userId]);
 
         let todayRevenue = 0;
         let weekRevenue = 0;
@@ -123,8 +123,8 @@ exports.getDashboardData = async (req, res) => {
             const [dayOrders] = await db.query(`
                 SELECT SUM(TotalAmount) as revenue
                 FROM Orders
-                WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt < ?
-            `, [d, nextD]);
+                WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt < ? AND UserID = ?
+            `, [d, nextD, req.userId]);
             
             const revenue = dayOrders[0].revenue ? parseFloat(dayOrders[0].revenue) : 0;
             const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -142,11 +142,11 @@ exports.getDashboardData = async (req, res) => {
             LEFT JOIN Products p ON oi.ProductID = p.ProductID
             LEFT JOIN OrderItemToppings oit ON oi.OrderItemID = oit.OrderItemID AND oi.ProductID IS NULL
             LEFT JOIN Toppings t ON oit.ToppingID = t.ToppingID
-            WHERE o.Status = 'COMPLETED'
+            WHERE o.Status = 'COMPLETED' AND o.UserID = ?
             GROUP BY ItemName
             ORDER BY TotalSold DESC
             LIMIT 5
-        `);
+        `, [req.userId]);
 
         res.status(200).json({
             success: true,

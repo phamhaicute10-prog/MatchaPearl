@@ -10,6 +10,15 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+// Middleware to parse User-Id from headers
+app.use((req, res, next) => {
+    const userId = req.headers['user-id'];
+    if (userId) {
+        req.userId = parseInt(userId, 10);
+    }
+    next();
+});
+
 // Load API Routes
 app.use('/api', apiRoutes);
 

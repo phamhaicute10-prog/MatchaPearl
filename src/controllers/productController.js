@@ -2,7 +2,7 @@ const ProductModel = require('../models/productModel');
 
 exports.getCategories = async (req, res) => {
     try {
-        const rows = await ProductModel.getAllCategories();
+        const rows = await ProductModel.getAllCategories(req.userId);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -11,7 +11,7 @@ exports.getCategories = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
     try {
-        const rows = await ProductModel.getAllProducts();
+        const rows = await ProductModel.getAllProducts(req.userId);
         if (rows.length > 0) {
             console.log('--- DATABASE ROW STRUCTURE ---');
             console.log('Available columns:', Object.keys(rows[0]));
@@ -27,7 +27,7 @@ exports.getProducts = async (req, res) => {
 
 exports.getToppings = async (req, res) => {
     try {
-        const rows = await ProductModel.getAllToppings();
+        const rows = await ProductModel.getAllToppings(req.userId);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -48,7 +48,7 @@ exports.addProduct = async (req, res) => {
         
         const newProductId = await ProductModel.createProduct({
             CategoryID, ProductName, Price, Description, ImageURL, Status: statusValue
-        });
+        }, req.userId);
         
         res.status(201).json({ message: "Product created successfully", productId: newProductId });
     } catch (err) {
@@ -69,7 +69,7 @@ exports.updateProduct = async (req, res) => {
             Description, 
             ImageURL, 
             Status: (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1
-        });
+        }, req.userId);
 
         if (affectedRows === 0) {
             return res.status(404).json({ error: "Product not found" });
@@ -85,7 +85,7 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const affectedRows = await ProductModel.deleteProduct(id);
+        const affectedRows = await ProductModel.deleteProduct(id, req.userId);
 
         if (affectedRows === 0) {
             return res.status(404).json({ error: "Product not found" });
@@ -105,7 +105,7 @@ exports.addTopping = async (req, res) => {
         if (!ToppingName || !Price) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-        const insertId = await ProductModel.createTopping({ ToppingName, Price, Description, ImageURL, UserID, Status });
+        const insertId = await ProductModel.createTopping({ ToppingName, Price, Description, ImageURL, Status }, req.userId);
         res.status(201).json({ message: "Topping added successfully", toppingId: insertId });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -121,7 +121,7 @@ exports.updateTopping = async (req, res) => {
         if (!ToppingName || !Price) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-        const affectedRows = await ProductModel.updateTopping(id, { ToppingName, Price, Description, ImageURL, Status });
+        const affectedRows = await ProductModel.updateTopping(id, { ToppingName, Price, Description, ImageURL, Status }, req.userId);
         if (affectedRows === 0) return res.status(404).json({ error: "Topping not found" });
         res.json({ message: "Topping updated successfully" });
     } catch (err) {
@@ -132,7 +132,7 @@ exports.updateTopping = async (req, res) => {
 exports.deleteTopping = async (req, res) => {
     try {
         const { id } = req.params;
-        const affectedRows = await ProductModel.deleteTopping(id);
+        const affectedRows = await ProductModel.deleteTopping(id, req.userId);
         if (affectedRows === 0) return res.status(404).json({ error: "Topping not found" });
         res.json({ message: "Topping deleted successfully" });
     } catch (err) {
