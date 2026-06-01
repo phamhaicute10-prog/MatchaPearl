@@ -109,7 +109,10 @@ exports.forgotPassword = async (req, res) => {
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             console.log("Bắt đầu cấu hình Gmail SMTP cho:", process.env.EMAIL_USER);
             transporter = nodemailer.createTransport({
-                service: 'gmail',
+                host: 'smtp.gmail.com',
+                port: 587,
+                secure: false,
+                requireTLS: true,
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS
