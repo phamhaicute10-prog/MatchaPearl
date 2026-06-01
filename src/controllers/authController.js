@@ -1,6 +1,4 @@
 const pool = require('../config/db');
-const nodemailer = require('nodemailer');
-const dns = require('dns');
 
 exports.login = async (req, res) => {
     try {
@@ -106,64 +104,35 @@ exports.forgotPassword = async (req, res) => {
 
         const user = rows[0];
         
-        let transporter;
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            console.log("Bắt đầu cấu hình Gmail SMTP cho:", process.env.EMAIL_USER);
-            
-            // Ép buộc phân giải IP IPv4 để tránh lỗi ENETUNREACH trên Render
-            const smtpHostIpv4 = await new Promise((resolve, reject) => {
-                dns.lookup('smtp.gmail.com', { family: 4 }, (err, address) => {
-                    if (err) reject(err);
-                    else resolve(address);
-                });
-            });
-            console.log("Đã tìm thấy IP IPv4 của Gmail:", smtpHostIpv4);
+        const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
 
-            transporter = nodemailer.createTransport({
-                host: smtpHostIpv4,
-                port: 587,
-                secure: false,
-                requireTLS: true,
-                tls: {
-                    servername: 'smtp.gmail.com' // Cần thiết để xác thực SSL khi dùng IP
-                },
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS
-                },
-                connectionTimeout: 10000,
-                greetingTimeout: 10000,
-                socketTimeout: 10000
-            });
-        } else {
-            console.log("Không tìm thấy cấu hình Email, dùng Ethereal...");
-            let testAccount = await nodemailer.createTestAccount();
-            transporter = nodemailer.createTransport({
-                host: "smtp.ethereal.email",
-                port: 587,
-                secure: false, 
-                auth: {
-                    user: testAccount.user, 
-                    pass: testAccount.pass, 
-                },
-            });
+        if (!scriptUrl) {
+            console.log("Cảnh báo: Chưa cấu hình GOOGLE_SCRIPT_URL. Đang chạy chế độ mô phỏng Test.");
+            return res.json({ message: 'Đây là môi trường Test. Hãy thiết lập GOOGLE_SCRIPT_URL trên Render để gửi email thực.' });
         }
 
-        console.log("Đang thực hiện gửi email tới:", email);
-        let info = await transporter.sendMail({
-            from: '"Matcha Pearl POS" <noreply@matchapearl.com>',
-            to: email,
-            subject: "Khôi phục mật khẩu - Matcha Pearl",
-            html: `<p>Xin chào,</p><p>Bạn đã yêu cầu khôi phục mật khẩu cho hệ thống Matcha Pearl POS.</p><p>Tên đăng nhập: <b>${user.Username}</b></p><p>Mật khẩu: <b>${user.Password}</b></p><p>Vui lòng đổi mật khẩu sau khi đăng nhập.</p>`,
+        console.log("Bắt đầu gọi Google Apps Script API cho email:", email);
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                to: email,
+                subject: "Khôi phục mật khẩu - Matcha Pearl",
+                html: `<p>Xin chào,</p><p>Bạn đã yêu cầu khôi phục mật khẩu cho hệ thống Matcha Pearl POS.</p><p>Tên đăng nhập: <b>${user.Username}</b></p><p>Mật khẩu: <b>${user.Password}</b></p><p>Vui lòng đổi mật khẩu sau khi đăng nhập.</p>`
+            })
         });
-        console.log("Email đã gửi thành công:", info.messageId);
 
-        if (!process.env.EMAIL_USER) {
-            console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-            return res.json({ message: 'Đây là môi trường Test. Hãy kiểm tra màn hình Terminal (Console) Backend để bấm vào link xem email.' });
+        const result = await response.json();
+        
+        if (result.status === "success") {
+            console.log("Email đã được Google gửi thành công!");
+            return res.json({ message: 'Đã gửi thông tin tài khoản và mật khẩu vào email của bạn!' });
+        } else {
+            console.error("Google Apps Script báo lỗi:", result.message);
+            return res.status(500).json({ message: 'Không thể gửi email từ Google Server' });
         }
-
-        res.json({ message: 'Đã gửi thông tin tài khoản và mật khẩu vào email của bạn!' });
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ message: 'Lỗi server' });
