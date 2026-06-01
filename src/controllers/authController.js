@@ -1,5 +1,9 @@
 const pool = require('../config/db');
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Fix cho lỗi Render cố gắng dùng IPv6 kết nối Gmail
+dns.setDefaultResultOrder('ipv4first');
 
 exports.login = async (req, res) => {
     try {
