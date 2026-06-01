@@ -107,14 +107,19 @@ exports.forgotPassword = async (req, res) => {
         
         let transporter;
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            console.log("Bắt đầu cấu hình Gmail SMTP cho:", process.env.EMAIL_USER);
             transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS
-                }
+                },
+                connectionTimeout: 10000,
+                greetingTimeout: 10000,
+                socketTimeout: 10000
             });
         } else {
+            console.log("Không tìm thấy cấu hình Email, dùng Ethereal...");
             let testAccount = await nodemailer.createTestAccount();
             transporter = nodemailer.createTransport({
                 host: "smtp.ethereal.email",
@@ -127,12 +132,14 @@ exports.forgotPassword = async (req, res) => {
             });
         }
 
+        console.log("Đang thực hiện gửi email tới:", email);
         let info = await transporter.sendMail({
             from: '"Matcha Pearl POS" <noreply@matchapearl.com>',
             to: email,
             subject: "Khôi phục mật khẩu - Matcha Pearl",
             html: `<p>Xin chào,</p><p>Bạn đã yêu cầu khôi phục mật khẩu cho hệ thống Matcha Pearl POS.</p><p>Tên đăng nhập: <b>${user.Username}</b></p><p>Mật khẩu: <b>${user.Password}</b></p><p>Vui lòng đổi mật khẩu sau khi đăng nhập.</p>`,
         });
+        console.log("Email đã gửi thành công:", info.messageId);
 
         if (!process.env.EMAIL_USER) {
             console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
