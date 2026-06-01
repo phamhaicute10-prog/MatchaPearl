@@ -2,9 +2,6 @@ const pool = require('../config/db');
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 
-// Fix cho lỗi Render cố gắng dùng IPv6 kết nối Gmail
-dns.setDefaultResultOrder('ipv4first');
-
 exports.login = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -112,11 +109,24 @@ exports.forgotPassword = async (req, res) => {
         let transporter;
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             console.log("Bắt đầu cấu hình Gmail SMTP cho:", process.env.EMAIL_USER);
+            
+            // Ép buộc phân giải IP IPv4 để tránh lỗi ENETUNREACH trên Render
+            const smtpHostIpv4 = await new Promise((resolve, reject) => {
+                dns.lookup('smtp.gmail.com', { family: 4 }, (err, address) => {
+                    if (err) reject(err);
+                    else resolve(address);
+                });
+            });
+            console.log("Đã tìm thấy IP IPv4 của Gmail:", smtpHostIpv4);
+
             transporter = nodemailer.createTransport({
-                host: 'smtp.gmail.com',
+                host: smtpHostIpv4,
                 port: 587,
                 secure: false,
                 requireTLS: true,
+                tls: {
+                    servername: 'smtp.gmail.com' // Cần thiết để xác thực SSL khi dùng IP
+                },
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS
