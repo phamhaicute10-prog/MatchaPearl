@@ -40,6 +40,7 @@ router.post('/toppings/update/:id', upload.single('image'), productController.up
 router.delete('/toppings/:id', productController.deleteTopping);
 
 // Order Routes
+router.post('/orders/calculate', orderController.calculateOrder);
 router.post('/orders', orderController.createOrder);
 router.get('/orders', orderController.getOrders);
 router.get('/orders/:id', orderController.getOrderDetails);

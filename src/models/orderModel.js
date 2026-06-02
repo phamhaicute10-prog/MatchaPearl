@@ -1,46 +1,143 @@
 const db = require('../config/db');
 
 class OrderModel {
-    static async createOrder(userId, totalAmount, paymentMethod, items, status = 'COMPLETED') {
+    static async calculateOrderData(connection, userId, items, voucherId) {
+        let originalTotalAmount = 0;
+        let finalTotalAmount = 0;
+        let discountAmount = 0;
+
+        const processedItems = [];
+
+        for (const item of items) {
+            const isStandaloneTopping = item.productId < 0;
+            const dbProductId = isStandaloneTopping ? null : item.productId;
+            
+            let basePrice = 0;
+            let categoryId = null;
+
+            if (isStandaloneTopping) {
+                const toppingId = -item.productId - 1000;
+                const [toppingRows] = await connection.query('SELECT Price FROM Toppings WHERE ToppingID = ?', [toppingId]);
+                basePrice = toppingRows.length > 0 ? toppingRows[0].Price : 0;
+            } else {
+                const [productRows] = await connection.query('SELECT BasePrice, CategoryID FROM Products WHERE ProductID = ?', [dbProductId]);
+                if (productRows.length > 0) {
+                    basePrice = productRows[0].BasePrice;
+                    categoryId = productRows[0].CategoryID;
+                }
+            }
+
+            let toppingsTotal = 0;
+            const processedToppings = [];
+            
+            if (!isStandaloneTopping && item.toppings && item.toppings.length > 0) {
+                for (const t of item.toppings) {
+                    const [tRows] = await connection.query('SELECT Price FROM Toppings WHERE ToppingID = ?', [t.toppingId]);
+                    const tPrice = tRows.length > 0 ? tRows[0].Price : 0;
+                    toppingsTotal += tPrice;
+                    processedToppings.push({ toppingId: t.toppingId, price: tPrice });
+                }
+            } else if (isStandaloneTopping) {
+                 const toppingId = -item.productId - 1000;
+                 processedToppings.push({ toppingId: toppingId, price: basePrice });
+                 basePrice = 0; 
+            }
+
+            const subTotal = (basePrice + toppingsTotal) * item.quantity;
+            originalTotalAmount += subTotal;
+
+            processedItems.push({
+                productId: dbProductId,
+                sugarLevel: item.sugarLevel,
+                iceLevel: item.iceLevel,
+                quantity: item.quantity,
+                categoryId: categoryId,
+                basePrice: basePrice,
+                toppingsTotal: toppingsTotal,
+                subTotal: subTotal,
+                toppings: processedToppings,
+                isStandaloneTopping: isStandaloneTopping
+            });
+        }
+
+        if (voucherId) {
+            const [voucherRows] = await connection.query('SELECT * FROM Vouchers WHERE VoucherID = ? AND Status = 1', [voucherId]);
+            if (voucherRows.length > 0) {
+                const v = voucherRows[0];
+                if (v.DiscountType === 'PERCENTAGE') {
+                    discountAmount = originalTotalAmount * (v.DiscountValue / 100);
+                } else if (v.DiscountType === 'BUY_X_GET_Y') {
+                    let x = v.BuyQuantity || 0;
+                    let y = v.GetQuantity || 0;
+                    if (x > 0 && y > 0) {
+                        const groups = {};
+                        for (const item of processedItems) {
+                            if (item.productId !== null) {
+                                if (!groups[item.productId]) groups[item.productId] = [];
+                                groups[item.productId].push(item);
+                            }
+                        }
+                        for (const pid in groups) {
+                            const group = groups[pid];
+                            let totalQty = 0;
+                            for (const i of group) totalQty += i.quantity;
+                            if (totalQty >= x + y) {
+                                let sets = Math.floor(totalQty / (x + y));
+                                let freeItems = sets * y;
+                                discountAmount += (group[0].basePrice * freeItems);
+                            }
+                        }
+                    }
+                } else if (v.DiscountType === 'FREE_TOPPING') {
+                    for (const item of processedItems) {
+                        discountAmount += (item.toppingsTotal * item.quantity);
+                    }
+                } else if (v.DiscountType === 'FIXED_PRICE') {
+                    const targetCat = v.TargetCategoryID || 0;
+                    const fixedPrice = v.DiscountValue || 0;
+                    for (const item of processedItems) {
+                        if (item.categoryId === targetCat) {
+                            if (item.basePrice > fixedPrice) {
+                                discountAmount += ((item.basePrice - fixedPrice) * item.quantity);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        finalTotalAmount = originalTotalAmount - discountAmount;
+        if (finalTotalAmount < 0) finalTotalAmount = 0;
+
+        return { finalTotalAmount, processedItems };
+    }
+
+    static async createOrder(userId, paymentMethod, items, voucherId, status = 'COMPLETED') {
         let connection;
         try {
             connection = await db.getConnection();
             await connection.beginTransaction();
 
+            const { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, userId, items, voucherId);
+
             const [orderResult] = await connection.query(
                 'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status) VALUES (?, ?, ?, ?)',
-                [userId, totalAmount, paymentMethod, status]
+                [userId, finalTotalAmount, paymentMethod, status]
             );
             const orderId = orderResult.insertId;
 
-            for (const item of items) {
-                const isStandaloneTopping = item.productId < 0;
-                const dbProductId = isStandaloneTopping ? null : item.productId;
-
+            for (const item of processedItems) {
                 const [itemResult] = await connection.query(
                     'INSERT INTO OrderItems (OrderID, ProductID, SugarLevel, IceLevel, Quantity, SubTotal) VALUES (?, ?, ?, ?, ?, ?)',
-                    [orderId, dbProductId, item.sugarLevel, item.iceLevel, item.quantity, item.subTotal]
+                    [orderId, item.productId, item.sugarLevel, item.iceLevel, item.quantity, item.subTotal]
                 );
                 const orderItemId = itemResult.insertId;
 
-                if (isStandaloneTopping) {
-                    const toppingId = -item.productId - 1000;
-                    const [toppingRows] = await connection.query(
-                        'SELECT Price FROM Toppings WHERE ToppingID = ?',
-                        [toppingId]
-                    );
-                    const toppingPrice = toppingRows.length > 0 ? toppingRows[0].Price : 0;
+                for (const topping of item.toppings) {
                     await connection.query(
                         'INSERT INTO OrderItemToppings (OrderItemID, ToppingID, PriceAtOrder) VALUES (?, ?, ?)',
-                        [orderItemId, toppingId, toppingPrice]
+                        [orderItemId, topping.toppingId, topping.price]
                     );
-                } else if (item.toppings && item.toppings.length > 0) {
-                    for (const topping of item.toppings) {
-                        await connection.query(
-                            'INSERT INTO OrderItemToppings (OrderItemID, ToppingID, PriceAtOrder) VALUES (?, ?, ?)',
-                            [orderItemId, topping.toppingId, topping.price]
-                        );
-                    }
                 }
             }
 

@@ -2,12 +2,40 @@ const OrderModel = require('../models/orderModel');
 
 exports.createOrder = async (req, res) => {
     try {
-        const { totalAmount, paymentMethod, items, status } = req.body;
-        // Override body userId with the authenticated req.userId for security
-        const orderId = await OrderModel.createOrder(req.userId, totalAmount, paymentMethod, items, status);
+        const { paymentMethod, items, voucherId, status } = req.body;
+        // Backend now calculates totalAmount and ignores anything sent by frontend
+        const orderId = await OrderModel.createOrder(req.userId, paymentMethod, items, voucherId, status);
         res.status(201).json({ message: 'Order created successfully', orderId });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+};
+
+exports.calculateOrder = async (req, res) => {
+    let connection;
+    try {
+        const { items, voucherId } = req.body;
+        connection = await require('../config/db').getConnection();
+        const { finalTotalAmount, processedItems } = await OrderModel.calculateOrderData(connection, req.userId, items, voucherId);
+        
+        let discountAmount = 0;
+        let originalTotalAmount = 0;
+        for (const item of processedItems) {
+            originalTotalAmount += item.subTotal;
+        }
+        discountAmount = originalTotalAmount - finalTotalAmount;
+        if (discountAmount < 0) discountAmount = 0;
+
+        res.status(200).json({ 
+            success: true, 
+            finalTotalAmount, 
+            originalTotalAmount, 
+            discountAmount 
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
