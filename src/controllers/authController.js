@@ -7,7 +7,7 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
         }
 
-        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey FROM Users WHERE Username = ? AND Password = ?', [username, password]);
+        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey, Avatar FROM Users WHERE Username = ? AND Password = ?', [username, password]);
         
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
@@ -49,7 +49,8 @@ exports.register = async (req, res) => {
                 Username: username,
                 FullName: fullName,
                 Phone: phone,
-                Email: email
+                Email: email,
+                Avatar: null
             }
         });
     } catch (error) {
@@ -73,12 +74,22 @@ exports.updateProfile = async (req, res) => {
         let query = 'UPDATE Users SET FullName = ?, Phone = ?, Email = ?, PayosClientId = ?, PayosApiKey = ?, PayosChecksumKey = ?';
         let params = [fullName || null, phone || null, email || null, payosClientId || null, payosApiKey || null, payosChecksumKey || null];
 
+        if (req.file) {
+            query += ', Avatar = ?';
+            params.push(`/uploads/${req.file.filename}`);
+        }
+
         query += ' WHERE UserID = ?';
         params.push(userId);
 
         await pool.query(query, params);
+        
+        let avatarUrl = null;
+        if (req.file) {
+            avatarUrl = `/uploads/${req.file.filename}`;
+        }
 
-        res.json({ message: 'Cập nhật thông tin thành công' });
+        res.json({ message: 'Cập nhật thông tin thành công', avatarUrl: avatarUrl });
     } catch (error) {
         console.error('Update profile error:', error);
         res.status(500).json({ message: 'Lỗi server' });
