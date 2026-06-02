@@ -65,18 +65,13 @@ exports.register = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
-        const { userId, fullName, phone, email, password, payosClientId, payosApiKey, payosChecksumKey } = req.body;
+        const { userId, fullName, phone, email, payosClientId, payosApiKey, payosChecksumKey } = req.body;
         if (!userId) {
             return res.status(400).json({ message: 'Thiếu ID người dùng' });
         }
 
         let query = 'UPDATE Users SET FullName = ?, Phone = ?, Email = ?, PayosClientId = ?, PayosApiKey = ?, PayosChecksumKey = ?';
         let params = [fullName || null, phone || null, email || null, payosClientId || null, payosApiKey || null, payosChecksumKey || null];
-
-        if (password) {
-            query += ', Password = ?';
-            params.push(password);
-        }
 
         query += ' WHERE UserID = ?';
         params.push(userId);
@@ -86,6 +81,31 @@ exports.updateProfile = async (req, res) => {
         res.json({ message: 'Cập nhật thông tin thành công' });
     } catch (error) {
         console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+};
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { userId, oldPassword, newPassword } = req.body;
+        
+        if (!userId || !oldPassword || !newPassword) {
+            return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
+        }
+
+        // Verify old password
+        const [rows] = await pool.query('SELECT UserID FROM Users WHERE UserID = ? AND Password = ?', [userId, oldPassword]);
+        
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Mật khẩu cũ không chính xác' });
+        }
+
+        // Update to new password
+        await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [newPassword, userId]);
+
+        res.json({ message: 'Đổi mật khẩu thành công' });
+    } catch (error) {
+        console.error('Change password error:', error);
         res.status(500).json({ message: 'Lỗi server' });
     }
 };
