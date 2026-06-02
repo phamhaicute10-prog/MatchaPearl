@@ -1,5 +1,4 @@
 const pool = require('../config/db');
-const fs = require('fs');
 
 exports.login = async (req, res) => {
     try {
@@ -75,19 +74,9 @@ exports.updateProfile = async (req, res) => {
         let query = 'UPDATE Users SET FullName = ?, Phone = ?, Email = ?, PayosClientId = ?, PayosApiKey = ?, PayosChecksumKey = ?';
         let params = [fullName || null, phone || null, email || null, payosClientId || null, payosApiKey || null, payosChecksumKey || null];
 
-        let base64String = null;
         if (req.file) {
-            const fileData = fs.readFileSync(req.file.path);
-            base64String = `data:${req.file.mimetype};base64,` + fileData.toString('base64');
             query += ', Avatar = ?';
-            params.push(base64String);
-            
-            // Delete temp file after reading
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (e) {
-                console.error('Error deleting temp file:', e);
-            }
+            params.push(`/uploads/${req.file.filename}`);
         }
 
         query += ' WHERE UserID = ?';
@@ -95,7 +84,12 @@ exports.updateProfile = async (req, res) => {
 
         await pool.query(query, params);
         
-        res.json({ message: 'Cập nhật thông tin thành công', avatarUrl: base64String });
+        let avatarUrl = null;
+        if (req.file) {
+            avatarUrl = `/uploads/${req.file.filename}`;
+        }
+
+        res.json({ message: 'Cập nhật thông tin thành công', avatarUrl: avatarUrl });
     } catch (error) {
         console.error('Update profile error:', error);
         res.status(500).json({ message: 'Lỗi server' });
