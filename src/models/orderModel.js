@@ -18,12 +18,12 @@ class OrderModel {
             if (isStandaloneTopping) {
                 const toppingId = -item.productId - 1000;
                 const [toppingRows] = await connection.query('SELECT Price FROM Toppings WHERE ToppingID = ?', [toppingId]);
-                basePrice = toppingRows.length > 0 ? toppingRows[0].Price : 0;
+                basePrice = toppingRows.length > 0 ? Number(toppingRows[0].Price) : 0;
             } else {
                 const [productRows] = await connection.query('SELECT BasePrice, CategoryID FROM Products WHERE ProductID = ?', [dbProductId]);
                 if (productRows.length > 0) {
-                    basePrice = productRows[0].BasePrice;
-                    categoryId = productRows[0].CategoryID;
+                    basePrice = Number(productRows[0].BasePrice) || 0;
+                    categoryId = Number(productRows[0].CategoryID) || 0;
                 }
             }
 
@@ -33,7 +33,7 @@ class OrderModel {
             if (!isStandaloneTopping && item.toppings && item.toppings.length > 0) {
                 for (const t of item.toppings) {
                     const [tRows] = await connection.query('SELECT Price FROM Toppings WHERE ToppingID = ?', [t.toppingId]);
-                    const tPrice = tRows.length > 0 ? tRows[0].Price : 0;
+                    const tPrice = tRows.length > 0 ? Number(tRows[0].Price) || 0 : 0;
                     toppingsTotal += tPrice;
                     processedToppings.push({ toppingId: t.toppingId, price: tPrice });
                 }
@@ -67,8 +67,8 @@ class OrderModel {
                 if (v.DiscountType === 'PERCENTAGE') {
                     discountAmount = originalTotalAmount * (v.DiscountValue / 100);
                 } else if (v.DiscountType === 'BUY_X_GET_Y') {
-                    let x = v.BuyQuantity || 0;
-                    let y = v.GetQuantity || 0;
+                    let x = Number(v.BuyQuantity) || 0;
+                    let y = Number(v.GetQuantity) || 0;
                     if (x > 0 && y > 0) {
                         const groups = {};
                         for (const item of processedItems) {
@@ -90,11 +90,11 @@ class OrderModel {
                     }
                 } else if (v.DiscountType === 'FREE_TOPPING') {
                     for (const item of processedItems) {
-                        discountAmount += (item.toppingsTotal * item.quantity);
+                        discountAmount += (Number(item.toppingsTotal) * Number(item.quantity));
                     }
                 } else if (v.DiscountType === 'FIXED_PRICE') {
-                    const targetCat = v.TargetCategoryID || 0;
-                    const fixedPrice = v.DiscountValue || 0;
+                    const targetCat = Number(v.TargetCategoryID) || 0;
+                    const fixedPrice = Number(v.DiscountValue) || 0;
                     for (const item of processedItems) {
                         if (item.categoryId === targetCat) {
                             if (item.basePrice > fixedPrice) {
