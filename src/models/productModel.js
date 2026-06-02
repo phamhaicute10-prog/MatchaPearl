@@ -17,7 +17,7 @@ class ProductModel {
     }
 
     static async getAllToppings(userId) {
-        const [rows] = await db.query('SELECT * FROM Toppings WHERE UserID = ?', [userId]);
+        const [rows] = await db.query('SELECT * FROM Toppings WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
         return rows;
     }
 
@@ -61,18 +61,9 @@ class ProductModel {
     }
 
     static async deleteProduct(id, userId) {
-        try {
-            const [result] = await db.query('DELETE FROM Products WHERE ProductID = ? AND UserID = ?', [id, userId]);
-            return result.affectedRows;
-        } catch (error) {
-            // ER_ROW_IS_REFERENCED_2 means it is used in another table (e.g. OrderItems)
-            if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.errno === 1451) {
-                console.log(`Product ${id} is referenced in an order. Soft deleting...`);
-                const [result] = await db.query('UPDATE Products SET Status = -1 WHERE ProductID = ? AND UserID = ?', [id, userId]);
-                return result.affectedRows;
-            }
-            throw error;
-        }
+        // Use soft delete to prevent foreign key constraint errors with historical orders
+        const [result] = await db.query('UPDATE Products SET Status = -1 WHERE ProductID = ? AND UserID = ?', [id, userId]);
+        return result.affectedRows;
     }
 
     static async createTopping(toppingData, userId) {
@@ -102,7 +93,8 @@ class ProductModel {
     }
 
     static async deleteTopping(id, userId) {
-        const [result] = await db.query('DELETE FROM Toppings WHERE ToppingID = ? AND UserID = ?', [id, userId]);
+        // Use soft delete to prevent foreign key constraint errors with historical orders
+        const [result] = await db.query('UPDATE Toppings SET Status = -1 WHERE ToppingID = ? AND UserID = ?', [id, userId]);
         return result.affectedRows;
     }
 }
