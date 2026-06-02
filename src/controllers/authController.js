@@ -7,7 +7,7 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
         }
 
-        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password FROM Users WHERE Username = ? AND Password = ?', [username, password]);
+        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey FROM Users WHERE Username = ? AND Password = ?', [username, password]);
         
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
@@ -65,13 +65,13 @@ exports.register = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
-        const { userId, fullName, phone, email, password } = req.body;
+        const { userId, fullName, phone, email, password, payosClientId, payosApiKey, payosChecksumKey } = req.body;
         if (!userId) {
             return res.status(400).json({ message: 'Thiếu ID người dùng' });
         }
 
-        let query = 'UPDATE Users SET FullName = ?, Phone = ?, Email = ?';
-        let params = [fullName || null, phone || null, email || null];
+        let query = 'UPDATE Users SET FullName = ?, Phone = ?, Email = ?, PayosClientId = ?, PayosApiKey = ?, PayosChecksumKey = ?';
+        let params = [fullName || null, phone || null, email || null, payosClientId || null, payosApiKey || null, payosChecksumKey || null];
 
         if (password) {
             query += ', Password = ?';

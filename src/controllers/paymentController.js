@@ -1,15 +1,23 @@
 const { PayOS } = require('@payos/node');
-
-// Initializing PayOS with user's credentials loaded from environment
-const payos = new PayOS(
-  process.env.PAYOS_CLIENT_ID,
-  process.env.PAYOS_API_KEY,
-  process.env.PAYOS_CHECKSUM_KEY
-);
+const pool = require('../config/db');
 
 exports.createPaymentLink = async (req, res) => {
   try {
     const { amount, description, orderId } = req.body;
+    
+    // Fetch PayOS keys for the current user
+    const [userRows] = await pool.query('SELECT PayosClientId, PayosApiKey, PayosChecksumKey FROM Users WHERE UserID = ?', [req.userId]);
+    if (userRows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const { PayosClientId, PayosApiKey, PayosChecksumKey } = userRows[0];
+    
+    if (!PayosClientId || !PayosApiKey || !PayosChecksumKey) {
+      return res.status(400).json({ success: false, error: 'Tài khoản chưa cấu hình cổng thanh toán PayOS. Vui lòng vào Cập nhật Hồ sơ để cài đặt.' });
+    }
+    
+    const payos = new PayOS(PayosClientId, PayosApiKey, PayosChecksumKey);
 
     // orderCode must be an integer and unique. Let's use timestamp-based unique integer
     const orderCode = orderId ? parseInt(orderId) : Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000);
@@ -40,8 +48,15 @@ exports.createPaymentLink = async (req, res) => {
 exports.checkPaymentStatus = async (req, res) => {
   try {
     const { orderCode } = req.params;
-    
-    // Query PayOS directly for real-time payment link status
+
+    // Fetch PayOS keys for the current user
+    const [userRows] = await pool.query('SELECT PayosClientId, PayosApiKey, PayosChecksumKey FROM Users WHERE UserID = ?', [req.userId]);
+    if (userRows.length === 0 || !userRows[0].PayosClientId) {
+      return res.status(400).json({ success: false, error: 'PayOS keys not configured' });
+    }
+    const payos = new PayOS(userRows[0].PayosClientId, userRows[0].PayosApiKey, userRows[0].PayosChecksumKey);
+
+    // Query PayOS directly for real-time payment status
     const paymentInfo = await payos.paymentRequests.get(parseInt(orderCode));
     
     res.status(200).json({
