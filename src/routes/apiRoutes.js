@@ -6,6 +6,7 @@ const productController = require('../controllers/productController');
 const orderController = require('../controllers/orderController');
 const paymentController = require('../controllers/paymentController');
 const dashboardController = require('../controllers/dashboardController');
+const voucherController = require('../controllers/voucherController');
 const multer = require('multer');
 const path = require('path');
 
@@ -44,6 +45,12 @@ router.get('/orders', orderController.getOrders);
 router.get('/orders/:id', orderController.getOrderDetails);
 router.put('/orders/:id/status', orderController.updateOrderStatus);
 router.put('/orders/:id/cancel', orderController.cancelOrder);
+
+// Voucher Routes
+router.get('/vouchers', voucherController.getAllVouchers);
+router.post('/vouchers', voucherController.createVoucher);
+router.put('/vouchers/:id', voucherController.updateVoucher);
+router.delete('/vouchers/:id', voucherController.deleteVoucher);
 
 // Payment Routes
 router.post('/payment/create-payos-link', paymentController.createPaymentLink);
