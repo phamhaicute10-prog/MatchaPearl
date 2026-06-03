@@ -38,6 +38,14 @@ async function updateSchema() {
     } catch(e) { console.log('Avatar error:', e.message); }
 
     try {
+        await pool.query('ALTER TABLE Users ADD COLUMN Email VARCHAR(100) NULL UNIQUE');
+    } catch(e) { console.log('Email error:', e.message); }
+
+    try {
+        await pool.query("ALTER TABLE Users ADD COLUMN Status VARCHAR(20) DEFAULT 'active'");
+    } catch(e) { console.log('Status error:', e.message); }
+
+    try {
         console.log('Updating abc to admin...');
         await pool.query("UPDATE Users SET Role = 'admin' WHERE Username = 'abc'");
     } catch(e) { console.log(e.message); }
