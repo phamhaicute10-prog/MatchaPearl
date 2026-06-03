@@ -195,7 +195,7 @@ class OrderModel {
 
             let baseQuery = `
                 FROM Orders o 
-                LEFT JOIN Users u ON o.UserID = u.UserID 
+                LEFT JOIN Users u ON o.CreatedBy = u.UserID 
                 WHERE o.UserID = ?
             `;
             const queryParams = [userId];
