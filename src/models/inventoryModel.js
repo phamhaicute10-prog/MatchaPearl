@@ -43,8 +43,8 @@ class InventoryModel {
             );
 
             await connection.query(
-                'INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ManagerID, CreatedBy) VALUES (?, ?, "IMPORT", ?, ?)',
-                [ingredientId, amount, managerId, userId]
+                'INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ManagerID, CreatedBy) VALUES (?, ?, ?, ?, ?)',
+                [ingredientId, amount, 'IMPORT', managerId, userId]
             );
 
             await connection.commit();
