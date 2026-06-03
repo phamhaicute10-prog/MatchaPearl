@@ -18,7 +18,7 @@ exports.addStaff = async (req, res) => {
         const [existing] = await db.query('SELECT UserID FROM Users WHERE Username = ?', [username]);
         if (existing.length > 0) return res.status(400).json({ success: false, message: 'Tên đăng nhập đã tồn tại' });
 
-        const [existingEmail] = email ? await db.query('SELECT UserID FROM Users WHERE Email = ? AND Email != ""', [email]) : [[]];
+        const [existingEmail] = email ? await db.query("SELECT UserID FROM Users WHERE Email = ? AND Email != ''", [email]) : [[]];
         if (existingEmail.length > 0) return res.status(400).json({ success: false, message: 'Email đã tồn tại' });
 
         await db.query(
