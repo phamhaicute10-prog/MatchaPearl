@@ -37,7 +37,6 @@ async function updateSchema() {
     } catch(e) { console.log('Orders columns error:', e.message); }
 
     console.log('Update complete.');
-    process.exit(0);
 }
 
-updateSchema();
+module.exports = updateSchema;
