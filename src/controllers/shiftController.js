@@ -90,3 +90,14 @@ exports.getShifts = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+exports.getShiftReport = async (req, res) => {
+    try {
+        const shiftId = req.params.shiftId;
+        const report = await ShiftModel.getShiftReport(shiftId);
+        res.json({ success: true, report });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

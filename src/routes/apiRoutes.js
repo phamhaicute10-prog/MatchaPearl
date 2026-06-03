@@ -68,6 +68,7 @@ router.post('/shifts/open', shiftController.openShift);
 router.post('/shifts/close', shiftController.closeShift);
 router.get('/shifts/current', shiftController.getCurrentShift);
 router.get('/shifts', shiftController.getShifts);
+router.get('/shifts/:shiftId/report', shiftController.getShiftReport);
 
 // Inventory Routes
 router.get('/inventory/ingredients', inventoryController.getIngredients);
