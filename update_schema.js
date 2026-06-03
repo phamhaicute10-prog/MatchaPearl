@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-(async () => {
+async function updateSchema() {
     const pool = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
         port: process.env.DB_PORT || 3306,
@@ -95,5 +95,6 @@ require('dotenv').config();
     } catch(e) { console.log(e.message); }
 
     console.log('Database schema update finished.');
-    process.exit(0);
-})();
+}
+
+module.exports = updateSchema;

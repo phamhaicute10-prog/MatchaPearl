@@ -4,7 +4,7 @@
   "description": "Backend API for Matcha Pearl POS",
   "main": "src/app.js",
   "scripts": {
-    "start": "node update_schema.js && node src/app.js",
+    "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
   "dependencies": {
