@@ -4,6 +4,11 @@ const customerController = require('../controllers/customerController');
 const customerAuthController = require('../controllers/customerAuthController');
 const customerOrderController = require('../controllers/customerOrderController');
 const customerRewardController = require('../controllers/customerRewardController');
+const customerProductController = require('../controllers/customerProductController');
+
+router.get('/categories', customerProductController.getPublicCategories);
+router.get('/products', customerProductController.getPublicProducts);
+router.get('/toppings', customerProductController.getPublicToppings);
 
 router.post('/auth/register', customerAuthController.register);
 router.post('/auth/login', customerAuthController.login);
