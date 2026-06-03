@@ -2,10 +2,10 @@ const OrderModel = require('../models/orderModel');
 
 exports.createOrder = async (req, res) => {
     try {
-        const { paymentMethod, items, voucherId, status } = req.body;
+        const { paymentMethod, items, voucherId, status, customerId, pointsUsed } = req.body;
         const managerId = req.userId;
         const staffId = req.staffId || req.userId;
-        const orderId = await OrderModel.createOrder(managerId, staffId, paymentMethod, items, voucherId, status);
+        const orderId = await OrderModel.createOrder(managerId, staffId, paymentMethod, items, voucherId, status, customerId, pointsUsed);
         res.status(201).json({ message: 'Order created successfully', orderId });
     } catch (err) {
         res.status(500).json({ error: err.message });

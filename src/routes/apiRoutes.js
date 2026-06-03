@@ -10,6 +10,7 @@ const voucherController = require('../controllers/voucherController');
 const shiftController = require('../controllers/shiftController');
 const inventoryController = require('../controllers/inventoryController');
 const staffController = require('../controllers/staffController');
+const customerRoutes = require('./customerRoutes');
 const multer = require('multer');
 const path = require('path');
 
@@ -85,5 +86,7 @@ router.get('/staffs', staffController.getStaffs);
 router.post('/staffs', staffController.addStaff);
 router.put('/staffs/:id', staffController.updateStaff);
 router.delete('/staffs/:id', staffController.deleteStaff);
+// Customer Routes
+router.use('/customers', customerRoutes);
 
 module.exports = router;

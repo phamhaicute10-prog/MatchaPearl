@@ -112,13 +112,33 @@ class OrderModel {
         return { finalTotalAmount, processedItems };
     }
 
-    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED') {
+    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED', customerId = null, pointsUsed = 0) {
         let connection;
         try {
             connection = await db.getConnection();
             await connection.beginTransaction();
 
-            const { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
+            let { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
+
+            let discountFromPoints = 0;
+            if (customerId && pointsUsed > 0) {
+                const [custRows] = await connection.query('SELECT TotalPoints FROM Customers WHERE CustomerID = ? AND ManagerID = ?', [customerId, managerId]);
+                if (custRows.length === 0 || custRows[0].TotalPoints < pointsUsed) {
+                    throw new Error('Số điểm không đủ');
+                }
+                discountFromPoints = pointsUsed * 1000;
+                if (discountFromPoints > finalTotalAmount) discountFromPoints = finalTotalAmount;
+                finalTotalAmount -= discountFromPoints;
+                await connection.query('UPDATE Customers SET TotalPoints = TotalPoints - ? WHERE CustomerID = ?', [pointsUsed, customerId]);
+            }
+
+            let pointsEarned = 0;
+            if (customerId) {
+                pointsEarned = Math.floor(finalTotalAmount / 10000);
+                if (pointsEarned > 0) {
+                    await connection.query('UPDATE Customers SET TotalPoints = TotalPoints + ? WHERE CustomerID = ?', [pointsEarned, customerId]);
+                }
+            }
 
             // Find active shift for the staff
             const [shiftRows] = await connection.query(
@@ -128,8 +148,8 @@ class OrderModel {
             const shiftId = shiftRows.length > 0 ? shiftRows[0].ShiftID : null;
 
             const [orderResult] = await connection.query(
-                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status, CreatedBy, ShiftID) VALUES (?, ?, ?, ?, ?, ?)',
-                [managerId, finalTotalAmount, paymentMethod, status, staffId, shiftId]
+                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status, CreatedBy, ShiftID, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [managerId, finalTotalAmount, paymentMethod, status, staffId, shiftId, customerId, pointsEarned, pointsUsed, discountFromPoints]
             );
             const orderId = orderResult.insertId;
 
