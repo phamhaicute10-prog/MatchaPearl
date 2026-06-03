@@ -68,7 +68,7 @@ class ShiftModel {
         // Tính doanh thu từ Topping (vì topping có thể đứng riêng hoặc kèm theo)
         const [toppingStats] = await db.query(`
             SELECT 'Topping' as CategoryName, 
-                   COUNT(oit.OrderItemToppingID) as TotalQuantity, 
+                   COUNT(oit.ID) as TotalQuantity, 
                    SUM(oit.PriceAtOrder) as CategoryRevenue
             FROM Orders o
             JOIN OrderItems oi ON o.OrderID = oi.OrderID
