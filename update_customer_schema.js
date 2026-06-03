@@ -16,12 +16,12 @@ async function updateSchema() {
     // 1. Nâng cấp bảng Customers
     console.log('1. Cập nhật bảng Customers...');
     const customerColumns = [
-        'ALTER TABLE Customers ADD COLUMN Email VARCHAR(100) NULL',
-        'ALTER TABLE Customers ADD COLUMN PasswordHash VARCHAR(255) NULL',
-        'ALTER TABLE Customers ADD COLUMN ExternalID VARCHAR(100) NULL',
-        'ALTER TABLE Customers ADD COLUMN MembershipLevel VARCHAR(50) DEFAULT "Đồng"',
-        'ALTER TABLE Customers ADD COLUMN Birthday DATE NULL',
-        'ALTER TABLE Customers ADD COLUMN Gender VARCHAR(10) NULL'
+        "ALTER TABLE Customers ADD COLUMN Email VARCHAR(100) NULL",
+        "ALTER TABLE Customers ADD COLUMN PasswordHash VARCHAR(255) NULL",
+        "ALTER TABLE Customers ADD COLUMN ExternalID VARCHAR(100) NULL",
+        "ALTER TABLE Customers ADD COLUMN MembershipLevel VARCHAR(50) DEFAULT 'Đồng'",
+        "ALTER TABLE Customers ADD COLUMN Birthday DATE NULL",
+        "ALTER TABLE Customers ADD COLUMN Gender VARCHAR(10) NULL"
     ];
     for (const q of customerColumns) {
         try {
@@ -33,13 +33,13 @@ async function updateSchema() {
     // 2. Nâng cấp bảng Orders
     console.log('2. Cập nhật bảng Orders...');
     const orderColumns = [
-        'ALTER TABLE Orders ADD COLUMN DiscountAmount DECIMAL(10,2) DEFAULT 0',
-        'ALTER TABLE Orders ADD COLUMN ShippingFee DECIMAL(10,2) DEFAULT 0',
-        'ALTER TABLE Orders ADD COLUMN FinalAmount DECIMAL(10,2) DEFAULT 0',
-        'ALTER TABLE Orders ADD COLUMN PaymentMethod VARCHAR(50) NULL',
-        'ALTER TABLE Orders ADD COLUMN OrderType VARCHAR(50) DEFAULT "Tại chỗ"',
-        'ALTER TABLE Orders ADD COLUMN ShippingAddress VARCHAR(255) NULL',
-        'ALTER TABLE Orders ADD COLUMN VoucherID INT NULL'
+        "ALTER TABLE Orders ADD COLUMN DiscountAmount DECIMAL(10,2) DEFAULT 0",
+        "ALTER TABLE Orders ADD COLUMN ShippingFee DECIMAL(10,2) DEFAULT 0",
+        "ALTER TABLE Orders ADD COLUMN FinalAmount DECIMAL(10,2) DEFAULT 0",
+        "ALTER TABLE Orders ADD COLUMN PaymentMethod VARCHAR(50) NULL",
+        "ALTER TABLE Orders ADD COLUMN OrderType VARCHAR(50) DEFAULT 'Tại chỗ'",
+        "ALTER TABLE Orders ADD COLUMN ShippingAddress VARCHAR(255) NULL",
+        "ALTER TABLE Orders ADD COLUMN VoucherID INT NULL"
     ];
     for (const q of orderColumns) {
         try {
@@ -57,7 +57,7 @@ async function updateSchema() {
                 CustomerID INT NOT NULL,
                 OrderID INT NULL,
                 PointsChange DECIMAL(10,2) NOT NULL,
-                Type VARCHAR(50) NOT NULL, -- "Tích điểm", "Tiêu điểm", "Đổi quà"
+                Type VARCHAR(50) NOT NULL,
                 Reason VARCHAR(255) NULL,
                 CreatedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE
@@ -75,11 +75,11 @@ async function updateSchema() {
                 Code VARCHAR(50) NOT NULL UNIQUE,
                 Title VARCHAR(255) NOT NULL,
                 DiscountValue DECIMAL(10,2) NOT NULL,
-                DiscountType VARCHAR(20) NOT NULL, -- "Tiền mặt", "Phần trăm"
+                DiscountType VARCHAR(20) NOT NULL,
                 MinOrderValue DECIMAL(10,2) DEFAULT 0,
                 MaxDiscountValue DECIMAL(10,2) NULL,
                 ExpiryDate DATETIME NULL,
-                PointsRequired INT DEFAULT 0, -- Số điểm cần để đổi
+                PointsRequired INT DEFAULT 0,
                 IsActive BOOLEAN DEFAULT TRUE,
                 CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -93,7 +93,7 @@ async function updateSchema() {
                 VoucherID INT NOT NULL,
                 ReceivedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UsedDate DATETIME NULL,
-                Status VARCHAR(50) DEFAULT "Chưa dùng", -- "Chưa dùng", "Đã dùng", "Hết hạn"
+                Status VARCHAR(50) DEFAULT 'Chưa dùng',
                 FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE,
                 FOREIGN KEY (VoucherID) REFERENCES Vouchers(VoucherID) ON DELETE CASCADE
             )
@@ -123,10 +123,10 @@ async function updateSchema() {
                 NewsID INT AUTO_INCREMENT PRIMARY KEY,
                 Title VARCHAR(255) NOT NULL,
                 Content TEXT NOT NULL,
-                Type VARCHAR(50) DEFAULT "Tin tức", -- "Tin tức", "Khuyến mãi"
+                Type VARCHAR(50) DEFAULT 'Tin tức',
                 ImageURL VARCHAR(255) NULL,
                 PublishedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
-                Status VARCHAR(50) DEFAULT "Hiển thị"
+                Status VARCHAR(50) DEFAULT 'Hiển thị'
             )
         `);
         console.log(' - Đã tạo News');
