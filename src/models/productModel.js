@@ -8,11 +8,15 @@ class ProductModel {
 
     static async getAllProducts(userId) {
         const [products] = await db.query('SELECT * FROM Products WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
-        const [recipes] = await db.query('SELECT r.ProductID, r.IngredientID, r.Amount, i.Name as IngredientName, i.Unit, i.CurrentStock FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ManagerID = ? AND r.ProductID IS NOT NULL', [userId]);
+        const [recipes] = await db.query('SELECT r.ProductID, r.IngredientID, r.Amount, i.Name as IngredientName, i.Unit, i.CurrentStock, i.IngredientID as ValidIngredient FROM Recipes r LEFT JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ManagerID = ? AND r.ProductID IS NOT NULL', [userId]);
         
         products.forEach(p => {
             let canMake = true;
             p.recipes = recipes.filter(r => r.ProductID === p.ProductID).map(r => {
+                if (r.ValidIngredient === null) {
+                    canMake = false; // Missing ingredient
+                    return null;
+                }
                 const amt = parseFloat(r.Amount);
                 if (parseFloat(r.CurrentStock) < amt) {
                     canMake = false;
@@ -24,7 +28,7 @@ class ProductModel {
                     amount: amt,
                     currentStock: parseFloat(r.CurrentStock)
                 };
-            });
+            }).filter(r => r !== null);
             // Tự động kiểm tra Hết hàng
             if (!canMake || p.Status === 0) {
                 p.Status = 0; // Báo Hết hàng
@@ -40,11 +44,15 @@ class ProductModel {
 
     static async getAllToppings(userId) {
         const [toppings] = await db.query('SELECT * FROM Toppings WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
-        const [recipes] = await db.query('SELECT r.ToppingID, r.IngredientID, r.Amount, i.Name as IngredientName, i.Unit, i.CurrentStock FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ManagerID = ? AND r.ToppingID IS NOT NULL', [userId]);
+        const [recipes] = await db.query('SELECT r.ToppingID, r.IngredientID, r.Amount, i.Name as IngredientName, i.Unit, i.CurrentStock, i.IngredientID as ValidIngredient FROM Recipes r LEFT JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ManagerID = ? AND r.ToppingID IS NOT NULL', [userId]);
         
         toppings.forEach(t => {
             let canMake = true;
             t.recipes = recipes.filter(r => r.ToppingID === t.ToppingID).map(r => {
+                if (r.ValidIngredient === null) {
+                    canMake = false;
+                    return null;
+                }
                 const amt = parseFloat(r.Amount);
                 if (parseFloat(r.CurrentStock) < amt) {
                     canMake = false;
@@ -56,7 +64,7 @@ class ProductModel {
                     amount: amt,
                     currentStock: parseFloat(r.CurrentStock)
                 };
-            });
+            }).filter(r => r !== null);
             if (!canMake || t.Status === 0) {
                 t.Status = 0;
             }
