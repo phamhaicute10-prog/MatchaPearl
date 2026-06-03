@@ -38,6 +38,18 @@ class CustomerModel {
         }
     }
 
+    static async updateCustomer(managerId, customerId, fullName, phone) {
+        try {
+            const [result] = await db.query(
+                'UPDATE Customers SET FullName = ?, Phone = ? WHERE CustomerID = ? AND ManagerID = ?',
+                [fullName, phone, customerId, managerId]
+            );
+            return result.affectedRows > 0;
+        } catch (err) {
+            throw err;
+        }
+    }
+
     static async updatePoints(customerId, managerId, pointsChange) {
         try {
             const [result] = await db.query(

@@ -43,3 +43,29 @@ exports.createCustomer = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+exports.updateCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fullName, phone } = req.body;
+        
+        if (!fullName || !phone) {
+            return res.status(400).json({ success: false, message: 'FullName and Phone are required' });
+        }
+        
+        // Check if new phone already exists for a DIFFERENT customer
+        const existing = await CustomerModel.getCustomerByPhone(req.userId, phone);
+        if (existing && existing.CustomerID.toString() !== id) {
+            return res.status(400).json({ success: false, message: 'Phone number already registered by another customer' });
+        }
+        
+        const success = await CustomerModel.updateCustomer(req.userId, id, fullName, phone);
+        if (success) {
+            res.json({ success: true, message: 'Customer updated successfully' });
+        } else {
+            res.status(404).json({ success: false, message: 'Customer not found or no changes made' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};

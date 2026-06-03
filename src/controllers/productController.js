@@ -64,15 +64,21 @@ exports.updateProduct = async (req, res) => {
         const ImageURL = req.file ? `/uploads/${req.file.filename}` : null;
         const newStatus = (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1;
 
-        if (newStatus === 1) {
+        let checkRecipes = [];
+        if (req.body.recipes) {
+            checkRecipes = JSON.parse(req.body.recipes);
+        } else {
             const db = require('../config/db');
-            const [recipes] = await db.query(
-                'SELECT r.Amount, i.CurrentStock, i.Name FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ProductID = ? AND r.ManagerID = ?',
-                [id, req.userId]
-            );
-            for (const recipe of recipes) {
-                if (recipe.CurrentStock < recipe.Amount) {
-                    return res.status(400).json({ error: `Không thể bật trạng thái Còn hàng vì nguyên liệu ${recipe.Name} không đủ tồn kho (Tồn: ${recipe.CurrentStock}).` });
+            const [dbRecipes] = await db.query('SELECT r.Amount, r.IngredientID FROM Recipes r WHERE r.ProductID = ? AND r.ManagerID = ?', [id, req.userId]);
+            checkRecipes = dbRecipes.map(r => ({ ingredientId: r.IngredientID, amount: r.Amount }));
+        }
+
+        if (newStatus === 1 && checkRecipes.length > 0) {
+            const db = require('../config/db');
+            for (const recipe of checkRecipes) {
+                const [ing] = await db.query('SELECT CurrentStock, Name FROM Ingredients WHERE IngredientID = ? AND ManagerID = ?', [recipe.ingredientId, req.userId]);
+                if (ing.length > 0 && ing[0].CurrentStock < recipe.amount) {
+                    return res.status(400).json({ error: `Không thể bật trạng thái Còn hàng vì nguyên liệu ${ing[0].Name} không đủ tồn kho (Tồn: ${ing[0].CurrentStock}).` });
                 }
             }
         }
@@ -143,15 +149,21 @@ exports.updateTopping = async (req, res) => {
         
         const newStatus = (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1;
 
-        if (newStatus === 1) {
+        let checkRecipes = [];
+        if (req.body.recipes) {
+            checkRecipes = JSON.parse(req.body.recipes);
+        } else {
             const db = require('../config/db');
-            const [recipes] = await db.query(
-                'SELECT r.Amount, i.CurrentStock, i.Name FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ToppingID = ? AND r.ManagerID = ?',
-                [id, req.userId]
-            );
-            for (const recipe of recipes) {
-                if (recipe.CurrentStock < recipe.Amount) {
-                    return res.status(400).json({ error: `Không thể bật trạng thái Còn hàng vì nguyên liệu ${recipe.Name} không đủ tồn kho (Tồn: ${recipe.CurrentStock}).` });
+            const [dbRecipes] = await db.query('SELECT r.Amount, r.IngredientID FROM Recipes r WHERE r.ToppingID = ? AND r.ManagerID = ?', [id, req.userId]);
+            checkRecipes = dbRecipes.map(r => ({ ingredientId: r.IngredientID, amount: r.Amount }));
+        }
+
+        if (newStatus === 1 && checkRecipes.length > 0) {
+            const db = require('../config/db');
+            for (const recipe of checkRecipes) {
+                const [ing] = await db.query('SELECT CurrentStock, Name FROM Ingredients WHERE IngredientID = ? AND ManagerID = ?', [recipe.ingredientId, req.userId]);
+                if (ing.length > 0 && ing[0].CurrentStock < recipe.amount) {
+                    return res.status(400).json({ error: `Không thể bật trạng thái Còn hàng vì nguyên liệu ${ing[0].Name} không đủ tồn kho (Tồn: ${ing[0].CurrentStock}).` });
                 }
             }
         }
