@@ -133,7 +133,6 @@ async function updateSchema() {
     } catch(e) { console.log('Lỗi Reviews/News:', e.message); }
 
     console.log('--- Cập nhật hoàn tất ---');
-    process.exit(0);
 }
 
 updateSchema();

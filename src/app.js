@@ -6,6 +6,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const apiRoutes = require('./routes/apiRoutes');
 const updateSchema = require('../update_schema');
 const updatePointsSchema = require('../update_points_schema');
+const updateCustomerSchema = require('../update_customer_schema');
 
 const app = express();
 app.use(cors());
