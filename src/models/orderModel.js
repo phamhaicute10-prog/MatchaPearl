@@ -122,7 +122,7 @@ class OrderModel {
 
             // Find active shift for the staff
             const [shiftRows] = await connection.query(
-                'SELECT ShiftID FROM Shifts WHERE ManagerID = ? AND UserID = ? AND Status = "OPEN" LIMIT 1',
+                "SELECT ShiftID FROM Shifts WHERE ManagerID = ? AND UserID = ? AND Status = 'OPEN' LIMIT 1",
                 [managerId, staffId]
             );
             const shiftId = shiftRows.length > 0 ? shiftRows[0].ShiftID : null;
