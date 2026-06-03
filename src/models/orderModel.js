@@ -133,6 +133,13 @@ class OrderModel {
             );
             const orderId = orderResult.insertId;
 
+            if (shiftId) {
+                await connection.query(
+                    'UPDATE Shifts SET TotalRevenue = TotalRevenue + ? WHERE ShiftID = ?',
+                    [finalTotalAmount, shiftId]
+                );
+            }
+
             for (const item of processedItems) {
                 const [itemResult] = await connection.query(
                     'INSERT INTO OrderItems (OrderID, ProductID, SugarLevel, IceLevel, Quantity, SubTotal) VALUES (?, ?, ?, ?, ?, ?)',
