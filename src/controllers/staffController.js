@@ -41,3 +41,29 @@ exports.deleteStaff = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+exports.updateStaff = async (req, res) => {
+    try {
+        const managerId = req.userId;
+        const staffId = req.params.id;
+        const { password, fullName, phone, email, role, status } = req.body;
+
+        const [existingEmail] = email ? await db.query("SELECT UserID FROM Users WHERE Email = ? AND Email != '' AND UserID != ?", [email, staffId]) : [[]];
+        if (existingEmail.length > 0) return res.status(400).json({ success: false, message: 'Email đã tồn tại' });
+
+        if (password && password.trim() !== '') {
+            await db.query(
+                'UPDATE Users SET Password = ?, FullName = ?, Phone = ?, Email = ?, Role = ?, Status = ? WHERE UserID = ? AND ManagerID = ?',
+                [password, fullName, phone, email, role, status, staffId, managerId]
+            );
+        } else {
+            await db.query(
+                'UPDATE Users SET FullName = ?, Phone = ?, Email = ?, Role = ?, Status = ? WHERE UserID = ? AND ManagerID = ?',
+                [fullName, phone, email, role, status, staffId, managerId]
+            );
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};

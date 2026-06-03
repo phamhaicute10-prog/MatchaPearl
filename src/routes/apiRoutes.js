@@ -82,6 +82,7 @@ router.delete('/inventory/recipes/:recipeId', inventoryController.deleteRecipe);
 // Staff Routes
 router.get('/staffs', staffController.getStaffs);
 router.post('/staffs', staffController.addStaff);
+router.put('/staffs/:id', staffController.updateStaff);
 router.delete('/staffs/:id', staffController.deleteStaff);
 
 module.exports = router;
