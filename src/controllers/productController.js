@@ -47,7 +47,8 @@ exports.addProduct = async (req, res) => {
         const statusValue = (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1;
         
         const newProductId = await ProductModel.createProduct({
-            CategoryID, ProductName, Price, Description, ImageURL, Status: statusValue
+            CategoryID, ProductName, Price, Description, ImageURL, Status: statusValue,
+            recipes: req.body.recipes ? JSON.parse(req.body.recipes) : []
         }, req.userId);
         
         res.status(201).json({ message: "Product created successfully", productId: newProductId });
@@ -82,7 +83,8 @@ exports.updateProduct = async (req, res) => {
             Price, 
             Description, 
             ImageURL, 
-            Status: newStatus
+            Status: newStatus,
+            recipes: req.body.recipes ? JSON.parse(req.body.recipes) : undefined
         }, req.userId);
 
         if (affectedRows === 0) {
@@ -119,7 +121,10 @@ exports.addTopping = async (req, res) => {
         if (!ToppingName || !Price) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-        const insertId = await ProductModel.createTopping({ ToppingName, Price, Description, ImageURL, Status }, req.userId);
+        const insertId = await ProductModel.createTopping({ 
+            ToppingName, Price, Description, ImageURL, Status,
+            recipes: req.body.recipes ? JSON.parse(req.body.recipes) : []
+        }, req.userId);
         res.status(201).json({ message: "Topping added successfully", toppingId: insertId });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -151,7 +156,10 @@ exports.updateTopping = async (req, res) => {
             }
         }
 
-        const affectedRows = await ProductModel.updateTopping(id, { ToppingName, Price, Description, ImageURL, Status: newStatus }, req.userId);
+        const affectedRows = await ProductModel.updateTopping(id, { 
+            ToppingName, Price, Description, ImageURL, Status: newStatus,
+            recipes: req.body.recipes ? JSON.parse(req.body.recipes) : undefined
+        }, req.userId);
         if (affectedRows === 0) return res.status(404).json({ error: "Topping not found" });
         res.json({ message: "Topping updated successfully" });
     } catch (err) {

@@ -7,8 +7,30 @@ class ProductModel {
     }
 
     static async getAllProducts(userId) {
-        const [rows] = await db.query('SELECT * FROM Products WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
-        return rows;
+        const [products] = await db.query('SELECT * FROM Products WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
+        const [recipes] = await db.query('SELECT r.ProductID, r.IngredientID, r.Amount, i.Name as IngredientName, i.Unit, i.CurrentStock FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ManagerID = ? AND r.ProductID IS NOT NULL', [userId]);
+        
+        products.forEach(p => {
+            let canMake = true;
+            p.recipes = recipes.filter(r => r.ProductID === p.ProductID).map(r => {
+                const amt = parseFloat(r.Amount);
+                if (parseFloat(r.CurrentStock) < amt) {
+                    canMake = false;
+                }
+                return {
+                    ingredientId: r.IngredientID,
+                    name: r.IngredientName,
+                    unit: r.Unit,
+                    amount: amt,
+                    currentStock: parseFloat(r.CurrentStock)
+                };
+            });
+            // Tự động kiểm tra Hết hàng
+            if (!canMake || p.Status === 0) {
+                p.Status = 0; // Báo Hết hàng
+            }
+        });
+        return products;
     }
 
     static async getAvailableProducts(userId) {
@@ -17,8 +39,29 @@ class ProductModel {
     }
 
     static async getAllToppings(userId) {
-        const [rows] = await db.query('SELECT * FROM Toppings WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
-        return rows;
+        const [toppings] = await db.query('SELECT * FROM Toppings WHERE UserID = ? AND (Status != -1 OR Status IS NULL)', [userId]);
+        const [recipes] = await db.query('SELECT r.ToppingID, r.IngredientID, r.Amount, i.Name as IngredientName, i.Unit, i.CurrentStock FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ManagerID = ? AND r.ToppingID IS NOT NULL', [userId]);
+        
+        toppings.forEach(t => {
+            let canMake = true;
+            t.recipes = recipes.filter(r => r.ToppingID === t.ToppingID).map(r => {
+                const amt = parseFloat(r.Amount);
+                if (parseFloat(r.CurrentStock) < amt) {
+                    canMake = false;
+                }
+                return {
+                    ingredientId: r.IngredientID,
+                    name: r.IngredientName,
+                    unit: r.Unit,
+                    amount: amt,
+                    currentStock: parseFloat(r.CurrentStock)
+                };
+            });
+            if (!canMake || t.Status === 0) {
+                t.Status = 0;
+            }
+        });
+        return toppings;
     }
 
     static async createProduct(productData, userId) {
@@ -35,7 +78,14 @@ class ProductModel {
                 userId
             ]
         );
-        return result.insertId;
+        
+        const productId = result.insertId;
+        if (productData.recipes && Array.isArray(productData.recipes)) {
+            for (const r of productData.recipes) {
+                await db.query('INSERT INTO Recipes (ProductID, IngredientID, Amount, ManagerID) VALUES (?, ?, ?, ?)', [productId, r.ingredientId, r.amount, userId]);
+            }
+        }
+        return productId;
     }
 
     static async updateProduct(id, productData, userId) {
@@ -57,6 +107,14 @@ class ProductModel {
         console.log('-----------------------------');
 
         const [result] = await db.query(query, params);
+        
+        if (productData.recipes && Array.isArray(productData.recipes)) {
+            await db.query('DELETE FROM Recipes WHERE ProductID = ? AND ManagerID = ?', [id, userId]);
+            for (const r of productData.recipes) {
+                await db.query('INSERT INTO Recipes (ProductID, IngredientID, Amount, ManagerID) VALUES (?, ?, ?, ?)', [id, r.ingredientId, r.amount, userId]);
+            }
+        }
+
         return result.affectedRows;
     }
 
@@ -72,7 +130,14 @@ class ProductModel {
             'INSERT INTO Toppings (ToppingName, Price, Description, Image, UserID, Status) VALUES (?, ?, ?, ?, ?, ?)',
             [ToppingName, Price, Description || null, ImageURL || null, userId, (Status !== undefined && Status !== null) ? Status : 1]
         );
-        return result.insertId;
+        
+        const toppingId = result.insertId;
+        if (toppingData.recipes && Array.isArray(toppingData.recipes)) {
+            for (const r of toppingData.recipes) {
+                await db.query('INSERT INTO Recipes (ToppingID, IngredientID, Amount, ManagerID) VALUES (?, ?, ?, ?)', [toppingId, r.ingredientId, r.amount, userId]);
+            }
+        }
+        return toppingId;
     }
 
     static async updateTopping(id, toppingData, userId) {
@@ -89,6 +154,14 @@ class ProductModel {
         params.push(id, userId);
 
         const [result] = await db.query(query, params);
+        
+        if (toppingData.recipes && Array.isArray(toppingData.recipes)) {
+            await db.query('DELETE FROM Recipes WHERE ToppingID = ? AND ManagerID = ?', [id, userId]);
+            for (const r of toppingData.recipes) {
+                await db.query('INSERT INTO Recipes (ToppingID, IngredientID, Amount, ManagerID) VALUES (?, ?, ?, ?)', [id, r.ingredientId, r.amount, userId]);
+            }
+        }
+
         return result.affectedRows;
     }
 
