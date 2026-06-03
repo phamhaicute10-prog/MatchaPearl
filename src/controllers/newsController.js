@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 exports.getNews = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM News WHERE Status = "Hiển thị" ORDER BY PublishedDate DESC');
+        const [rows] = await pool.query('SELECT * FROM News WHERE Status = \'Hiển thị\' ORDER BY PublishedDate DESC');
         res.json({
             success: true,
             data: rows

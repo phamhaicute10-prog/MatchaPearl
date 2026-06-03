@@ -16,7 +16,7 @@ exports.createOnlineOrder = async (req, res) => {
         await connection.beginTransaction();
 
         // 1. Lấy ManagerID mặc định (giả sử hệ thống 1 chi nhánh)
-        const [managers] = await connection.query('SELECT UserID FROM Users WHERE Role = "admin" OR Role = "manager" LIMIT 1');
+        const [managers] = await connection.query("SELECT UserID FROM Users WHERE Role = 'admin' OR Role = 'manager' LIMIT 1");
         const managerId = managers.length > 0 ? managers[0].UserID : 0;
 
         // 2. Tính toán tiền hàng

@@ -8,18 +8,24 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin' });
         }
 
-        // Kiểm tra số điện thoại hoặc email đã tồn tại chưa
+        // Kiểm tra số điện thoại hoặc email đã tồn tại trong bảng Customers chưa
         const [existing] = await pool.query('SELECT CustomerID FROM Customers WHERE Phone = ? OR Email = ?', [phone, email]);
         if (existing.length > 0) {
             return res.status(409).json({ success: false, message: 'Số điện thoại hoặc Email đã được sử dụng' });
         }
 
+        // Kiểm tra xem email có thuộc về tài khoản Nhân viên/Admin không
+        const [existingUser] = await pool.query('SELECT UserID FROM Users WHERE Email = ?', [email]);
+        if (existingUser.length > 0) {
+            return res.status(409).json({ success: false, message: 'Email này đã được sử dụng cho tài khoản nội bộ. Vui lòng dùng email khác.' });
+        }
+
         // Tạm thời lấy ManagerID đầu tiên làm mặc định (vì chuỗi 1 cửa hàng)
-        const [managers] = await pool.query('SELECT UserID FROM Users WHERE Role = "admin" OR Role = "manager" LIMIT 1');
+        const [managers] = await pool.query("SELECT UserID FROM Users WHERE Role = 'admin' OR Role = 'manager' LIMIT 1");
         const managerId = managers.length > 0 ? managers[0].UserID : 0;
 
         const [result] = await pool.query(
-            'INSERT INTO Customers (ManagerID, FullName, Phone, Email, PasswordHash, TotalPoints, MembershipLevel) VALUES (?, ?, ?, ?, ?, 0, "Đồng")',
+            "INSERT INTO Customers (ManagerID, FullName, Phone, Email, PasswordHash, TotalPoints, MembershipLevel) VALUES (?, ?, ?, ?, ?, 0, 'Đồng')",
             [managerId, fullName, phone, email, password] // Lưu plain text tạm thời
         );
 

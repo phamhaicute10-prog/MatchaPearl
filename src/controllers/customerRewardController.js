@@ -39,13 +39,13 @@ exports.exchangeReward = async (req, res) => {
 
         // Thêm vào Lịch sử điểm
         await connection.query(
-            'INSERT INTO PointHistory (CustomerID, PointsChange, Type, Reason) VALUES (?, ?, "Đổi quà", ?)',
+            "INSERT INTO PointHistory (CustomerID, PointsChange, Type, Reason) VALUES (?, ?, 'Đổi quà', ?)",
             [customerId, -pointsRequired, `Đổi điểm lấy: ${vRows[0].Title}`]
         );
 
         // Thêm Voucher vào ví Khách hàng
         await connection.query(
-            'INSERT INTO CustomerVouchers (CustomerID, VoucherID, Status) VALUES (?, ?, "Chưa dùng")',
+            "INSERT INTO CustomerVouchers (CustomerID, VoucherID, Status) VALUES (?, ?, 'Chưa dùng')",
             [customerId, voucherId]
         );
 
