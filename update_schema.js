@@ -12,22 +12,34 @@ async function updateSchema() {
     });
 
     try {
-        console.log('Adding Role and ManagerID to Users...');
-        await pool.query('ALTER TABLE Users ADD COLUMN Role VARCHAR(20) DEFAULT "admin"');
-        await pool.query('ALTER TABLE Users ADD COLUMN ManagerID INT NULL');
-    } catch(e) { console.log('Users alter Role/ManagerID error:', e.message); }
+        console.log('Adding Role column to Users...');
+        await pool.query("ALTER TABLE Users ADD COLUMN Role VARCHAR(20) DEFAULT 'admin'");
+    } catch(e) { console.log('Role column error:', e.message); }
 
     try {
-        console.log('Adding PayOS and Avatar columns to Users...');
+        console.log('Adding ManagerID column to Users...');
+        await pool.query('ALTER TABLE Users ADD COLUMN ManagerID INT NULL');
+    } catch(e) { console.log('ManagerID column error:', e.message); }
+
+    try {
         await pool.query('ALTER TABLE Users ADD COLUMN PayosClientId VARCHAR(255) NULL');
+    } catch(e) { console.log('PayosClientId error:', e.message); }
+
+    try {
         await pool.query('ALTER TABLE Users ADD COLUMN PayosApiKey VARCHAR(255) NULL');
+    } catch(e) { console.log('PayosApiKey error:', e.message); }
+
+    try {
         await pool.query('ALTER TABLE Users ADD COLUMN PayosChecksumKey VARCHAR(255) NULL');
+    } catch(e) { console.log('PayosChecksumKey error:', e.message); }
+
+    try {
         await pool.query('ALTER TABLE Users ADD COLUMN Avatar VARCHAR(255) NULL');
-    } catch(e) { console.log('Users alter Payos/Avatar error:', e.message); }
+    } catch(e) { console.log('Avatar error:', e.message); }
 
     try {
         console.log('Updating abc to admin...');
-        await pool.query('UPDATE Users SET Role = "admin" WHERE Username = "abc"');
+        await pool.query("UPDATE Users SET Role = 'admin' WHERE Username = 'abc'");
     } catch(e) { console.log(e.message); }
 
     try {
@@ -94,6 +106,7 @@ async function updateSchema() {
         `);
     } catch(e) { console.log(e.message); }
 
+    await pool.end();
     console.log('Database schema update finished.');
 }
 
