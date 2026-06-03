@@ -32,6 +32,14 @@ class ShiftModel {
         );
         return rows;
     }
+
+    static async getShiftsByUser(managerId, userId) {
+        const [rows] = await db.query(
+            "SELECT s.*, u.FullName as EmployeeName FROM Shifts s JOIN Users u ON s.UserID = u.UserID WHERE s.ManagerID = ? AND s.UserID = ? ORDER BY s.StartTime DESC LIMIT 50",
+            [managerId, userId]
+        );
+        return rows;
+    }
 }
 
 module.exports = ShiftModel;

@@ -77,7 +77,13 @@ exports.getShifts = async (req, res) => {
             managerId = admins.length > 0 ? admins[0].UserID : userId;
         }
         
-        const shifts = await ShiftModel.getShiftsByManager(managerId);
+        let shifts;
+        if (req.staffId) {
+            shifts = await ShiftModel.getShiftsByUser(managerId, userId);
+        } else {
+            shifts = await ShiftModel.getShiftsByManager(managerId);
+        }
+        
         res.json({ success: true, shifts });
     } catch (error) {
         console.error(error);
