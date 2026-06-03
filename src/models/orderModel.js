@@ -181,7 +181,7 @@ class OrderModel {
                         if (updateResult.affectedRows === 0) {
                             throw new Error('Không đủ nguyên liệu trong kho để hoàn tất đơn hàng!');
                         }
-                        await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, "SALE", ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
+                        await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, \'SALE\', ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
                     }
                 }
 
@@ -193,7 +193,7 @@ class OrderModel {
                     if (updateResult.affectedRows === 0) {
                         throw new Error('Không đủ nguyên liệu trong kho để hoàn tất đơn hàng!');
                     }
-                    await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, "SALE", ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
+                    await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, \'SALE\', ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
                 }
             }
 
