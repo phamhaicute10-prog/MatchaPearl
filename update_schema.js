@@ -77,6 +77,11 @@ async function updateSchema() {
     } catch(e) { console.log(e.message); }
 
     try {
+        console.log('Adding BasePrice column to Ingredients...');
+        await pool.query('ALTER TABLE Ingredients ADD COLUMN BasePrice DECIMAL(12,2) DEFAULT 0');
+    } catch(e) { console.log('BasePrice column error:', e.message); }
+
+    try {
         console.log('Creating Recipes table...');
         await pool.query(`
             CREATE TABLE IF NOT EXISTS Recipes (

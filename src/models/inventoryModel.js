@@ -7,19 +7,19 @@ class InventoryModel {
     }
 
     static async addIngredient(data, managerId) {
-        const { name, unit, minStockLevel } = data;
+        const { name, unit, minStockLevel, basePrice } = data;
         const [result] = await db.query(
-            'INSERT INTO Ingredients (Name, Unit, MinStockLevel, ManagerID) VALUES (?, ?, ?, ?)',
-            [name, unit, minStockLevel || 0, managerId]
+            'INSERT INTO Ingredients (Name, Unit, MinStockLevel, BasePrice, ManagerID) VALUES (?, ?, ?, ?, ?)',
+            [name, unit, minStockLevel || 0, basePrice || 0, managerId]
         );
         return result.insertId;
     }
 
     static async updateIngredient(id, data, managerId) {
-        const { name, unit, minStockLevel } = data;
+        const { name, unit, minStockLevel, basePrice } = data;
         const [result] = await db.query(
-            'UPDATE Ingredients SET Name = ?, Unit = ?, MinStockLevel = ? WHERE IngredientID = ? AND ManagerID = ?',
-            [name, unit, minStockLevel || 0, id, managerId]
+            'UPDATE Ingredients SET Name = ?, Unit = ?, MinStockLevel = ?, BasePrice = ? WHERE IngredientID = ? AND ManagerID = ?',
+            [name, unit, minStockLevel || 0, basePrice || 0, id, managerId]
         );
         return result.affectedRows;
     }
