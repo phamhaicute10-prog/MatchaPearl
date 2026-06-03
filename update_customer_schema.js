@@ -135,4 +135,6 @@ async function updateSchema() {
     console.log('--- Cập nhật hoàn tất ---');
 }
 
-updateSchema();
+setTimeout(() => {
+    updateSchema();
+}, 5000);
