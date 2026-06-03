@@ -119,6 +119,12 @@ async function updateSchema() {
         `);
     } catch(e) { console.log(e.message); }
 
+    try {
+        console.log('Adding ShiftID and CreatedBy to Orders...');
+        await pool.query('ALTER TABLE Orders ADD COLUMN ShiftID INT NULL');
+        await pool.query('ALTER TABLE Orders ADD COLUMN CreatedBy INT NULL');
+    } catch(e) { console.log('Orders columns error:', e.message); }
+
     await pool.end();
     console.log('Database schema update finished.');
 }
