@@ -256,7 +256,7 @@ class OrderModel {
             const [orders] = await db.query(`
                 SELECT o.*, u.FullName as CashierName 
                 FROM Orders o 
-                LEFT JOIN Users u ON o.UserID = u.UserID 
+                LEFT JOIN Users u ON o.CreatedBy = u.UserID 
                 WHERE o.OrderID = ? AND o.UserID = ?
             `, [orderId, userId]);
             

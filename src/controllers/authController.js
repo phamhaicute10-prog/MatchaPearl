@@ -7,10 +7,14 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
         }
 
-        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey, Avatar, Role, ManagerID FROM Users WHERE Username = ? AND Password = ?', [username, password]);
+        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey, Avatar, Role, ManagerID, Status FROM Users WHERE Username = ? AND Password = ?', [username, password]);
         
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
+        }
+
+        if (rows[0].Status === 'inactive') {
+            return res.status(403).json({ message: 'Tài khoản của bạn đã bị vô hiệu hóa hoặc ngừng hoạt động.' });
         }
 
         // Return user info. In a real app, return a JWT token here.
