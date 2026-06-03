@@ -15,7 +15,15 @@ require('dotenv').config();
         console.log('Adding Role and ManagerID to Users...');
         await pool.query('ALTER TABLE Users ADD COLUMN Role VARCHAR(20) DEFAULT "admin"');
         await pool.query('ALTER TABLE Users ADD COLUMN ManagerID INT NULL');
-    } catch(e) { console.log('Users alter error or already exists:', e.message); }
+    } catch(e) { console.log('Users alter Role/ManagerID error:', e.message); }
+
+    try {
+        console.log('Adding PayOS and Avatar columns to Users...');
+        await pool.query('ALTER TABLE Users ADD COLUMN PayosClientId VARCHAR(255) NULL');
+        await pool.query('ALTER TABLE Users ADD COLUMN PayosApiKey VARCHAR(255) NULL');
+        await pool.query('ALTER TABLE Users ADD COLUMN PayosChecksumKey VARCHAR(255) NULL');
+        await pool.query('ALTER TABLE Users ADD COLUMN Avatar VARCHAR(255) NULL');
+    } catch(e) { console.log('Users alter Payos/Avatar error:', e.message); }
 
     try {
         console.log('Updating abc to admin...');
