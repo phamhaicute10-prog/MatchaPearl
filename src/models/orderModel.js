@@ -120,9 +120,16 @@ class OrderModel {
 
             const { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
 
+            // Find active shift for the staff
+            const [shiftRows] = await connection.query(
+                'SELECT ShiftID FROM Shifts WHERE ManagerID = ? AND UserID = ? AND Status = "OPEN" LIMIT 1',
+                [managerId, staffId]
+            );
+            const shiftId = shiftRows.length > 0 ? shiftRows[0].ShiftID : null;
+
             const [orderResult] = await connection.query(
-                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status) VALUES (?, ?, ?, ?)',
-                [managerId, finalTotalAmount, paymentMethod, status]
+                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status, CreatedBy, ShiftID) VALUES (?, ?, ?, ?, ?, ?)',
+                [managerId, finalTotalAmount, paymentMethod, status, staffId, shiftId]
             );
             const orderId = orderResult.insertId;
 
@@ -175,7 +182,7 @@ class OrderModel {
 
     static async getOrders(filters = {}, userId) {
         try {
-            let { page = 1, limit = 10, status, startDate, endDate, search } = filters;
+            let { page = 1, limit = 10, status, startDate, endDate, search, shiftId } = filters;
             page = parseInt(page) || 1;
             limit = parseInt(limit) || 10;
 
@@ -185,6 +192,11 @@ class OrderModel {
                 WHERE o.UserID = ?
             `;
             const queryParams = [userId];
+
+            if (shiftId) {
+                baseQuery += ` AND o.ShiftID = ?`;
+                queryParams.push(shiftId);
+            }
 
             if (status && status !== 'Tất cả trạng thái' && status !== 'Tất cả') {
                 let statusVal = status;
