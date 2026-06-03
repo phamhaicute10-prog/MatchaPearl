@@ -3,7 +3,7 @@ const db = require('../config/db');
 exports.getStaffs = async (req, res) => {
     try {
         const managerId = req.userId;
-        const [rows] = await db.query('SELECT UserID, Username, FullName, Phone, Email, Role, Status FROM Users WHERE ManagerID = ?', [managerId]);
+        const [rows] = await db.query('SELECT UserID, Username, Password, FullName, Phone, Email, Role, Status FROM Users WHERE ManagerID = ?', [managerId]);
         res.json({ success: true, staffs: rows });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
