@@ -61,6 +61,20 @@ exports.updateProduct = async (req, res) => {
         const { id } = req.params;
         const { CategoryID, ProductName, Price, Description, Status } = req.body;
         const ImageURL = req.file ? `/uploads/${req.file.filename}` : null;
+        const newStatus = (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1;
+
+        if (newStatus === 1) {
+            const db = require('../config/db');
+            const [recipes] = await db.query(
+                'SELECT r.Amount, i.CurrentStock, i.Name FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ProductID = ? AND r.ManagerID = ?',
+                [id, req.userId]
+            );
+            for (const recipe of recipes) {
+                if (recipe.CurrentStock < recipe.Amount) {
+                    return res.status(400).json({ error: `Không thể bật trạng thái Còn hàng vì nguyên liệu ${recipe.Name} không đủ tồn kho (Tồn: ${recipe.CurrentStock}).` });
+                }
+            }
+        }
 
         const affectedRows = await ProductModel.updateProduct(id, {
             CategoryID, 
@@ -68,7 +82,7 @@ exports.updateProduct = async (req, res) => {
             Price, 
             Description, 
             ImageURL, 
-            Status: (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1
+            Status: newStatus
         }, req.userId);
 
         if (affectedRows === 0) {
@@ -121,7 +135,23 @@ exports.updateTopping = async (req, res) => {
         if (!ToppingName || !Price) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-        const affectedRows = await ProductModel.updateTopping(id, { ToppingName, Price, Description, ImageURL, Status }, req.userId);
+        
+        const newStatus = (Status !== undefined && Status !== null && Status !== '') ? parseInt(Status) : 1;
+
+        if (newStatus === 1) {
+            const db = require('../config/db');
+            const [recipes] = await db.query(
+                'SELECT r.Amount, i.CurrentStock, i.Name FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ToppingID = ? AND r.ManagerID = ?',
+                [id, req.userId]
+            );
+            for (const recipe of recipes) {
+                if (recipe.CurrentStock < recipe.Amount) {
+                    return res.status(400).json({ error: `Không thể bật trạng thái Còn hàng vì nguyên liệu ${recipe.Name} không đủ tồn kho (Tồn: ${recipe.CurrentStock}).` });
+                }
+            }
+        }
+
+        const affectedRows = await ProductModel.updateTopping(id, { ToppingName, Price, Description, ImageURL, Status: newStatus }, req.userId);
         if (affectedRows === 0) return res.status(404).json({ error: "Topping not found" });
         res.json({ message: "Topping updated successfully" });
     } catch (err) {

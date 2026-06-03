@@ -112,17 +112,17 @@ class OrderModel {
         return { finalTotalAmount, processedItems };
     }
 
-    static async createOrder(userId, paymentMethod, items, voucherId, status = 'COMPLETED') {
+    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED') {
         let connection;
         try {
             connection = await db.getConnection();
             await connection.beginTransaction();
 
-            const { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, userId, items, voucherId);
+            const { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
 
             const [orderResult] = await connection.query(
                 'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status) VALUES (?, ?, ?, ?)',
-                [userId, finalTotalAmount, paymentMethod, status]
+                [managerId, finalTotalAmount, paymentMethod, status]
             );
             const orderId = orderResult.insertId;
 
@@ -138,6 +138,28 @@ class OrderModel {
                         'INSERT INTO OrderItemToppings (OrderItemID, ToppingID, PriceAtOrder) VALUES (?, ?, ?)',
                         [orderItemId, topping.toppingId, topping.price]
                     );
+                    
+                    // Deduct stock for toppings
+                    const [toppingRecipes] = await connection.query('SELECT IngredientID, Amount FROM Recipes WHERE ToppingID = ? AND ManagerID = ?', [topping.toppingId, managerId]);
+                    for (const recipe of toppingRecipes) {
+                        const totalDeduct = recipe.Amount * item.quantity;
+                        const [updateResult] = await connection.query('UPDATE Ingredients SET CurrentStock = CurrentStock - ? WHERE IngredientID = ? AND ManagerID = ? AND CurrentStock >= ?', [totalDeduct, recipe.IngredientID, managerId, totalDeduct]);
+                        if (updateResult.affectedRows === 0) {
+                            throw new Error('Không đủ nguyên liệu trong kho để hoàn tất đơn hàng!');
+                        }
+                        await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, "SALE", ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
+                    }
+                }
+
+                // Deduct stock for products
+                const [productRecipes] = await connection.query('SELECT IngredientID, Amount FROM Recipes WHERE ProductID = ? AND ManagerID = ?', [item.productId, managerId]);
+                for (const recipe of productRecipes) {
+                    const totalDeduct = recipe.Amount * item.quantity;
+                    const [updateResult] = await connection.query('UPDATE Ingredients SET CurrentStock = CurrentStock - ? WHERE IngredientID = ? AND ManagerID = ? AND CurrentStock >= ?', [totalDeduct, recipe.IngredientID, managerId, totalDeduct]);
+                    if (updateResult.affectedRows === 0) {
+                        throw new Error('Không đủ nguyên liệu trong kho để hoàn tất đơn hàng!');
+                    }
+                    await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, "SALE", ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
                 }
             }
 

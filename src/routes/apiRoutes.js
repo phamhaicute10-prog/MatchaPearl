@@ -7,6 +7,9 @@ const orderController = require('../controllers/orderController');
 const paymentController = require('../controllers/paymentController');
 const dashboardController = require('../controllers/dashboardController');
 const voucherController = require('../controllers/voucherController');
+const shiftController = require('../controllers/shiftController');
+const inventoryController = require('../controllers/inventoryController');
+const staffController = require('../controllers/staffController');
 const multer = require('multer');
 const path = require('path');
 
@@ -59,5 +62,26 @@ router.get('/payment/status/:orderCode', paymentController.checkPaymentStatus);
 
 // Report Routes
 router.get('/reports/dashboard', dashboardController.getDashboardData);
+
+// Shift Routes
+router.post('/shifts/open', shiftController.openShift);
+router.post('/shifts/close', shiftController.closeShift);
+router.get('/shifts/current', shiftController.getCurrentShift);
+router.get('/shifts', shiftController.getShifts);
+
+// Inventory Routes
+router.get('/inventory/ingredients', inventoryController.getIngredients);
+router.post('/inventory/ingredients', inventoryController.addIngredient);
+router.put('/inventory/ingredients/:id', inventoryController.updateIngredient);
+router.delete('/inventory/ingredients/:id', inventoryController.deleteIngredient);
+router.post('/inventory/ingredients/:id/import', inventoryController.importStock);
+router.get('/inventory/recipes/:productId', inventoryController.getRecipes);
+router.post('/inventory/recipes/:productId', inventoryController.addRecipe);
+router.delete('/inventory/recipes/:recipeId', inventoryController.deleteRecipe);
+
+// Staff Routes
+router.get('/staffs', staffController.getStaffs);
+router.post('/staffs', staffController.addStaff);
+router.delete('/staffs/:id', staffController.deleteStaff);
 
 module.exports = router;

@@ -1,0 +1,91 @@
+const mysql = require('mysql2/promise');
+require('dotenv').config();
+
+(async () => {
+    const pool = mysql.createPool({
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'matcha_pearl_db',
+        ssl: (process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1') ? { rejectUnauthorized: false } : null
+    });
+
+    try {
+        console.log('Adding Role and ManagerID to Users...');
+        await pool.query('ALTER TABLE Users ADD COLUMN Role VARCHAR(20) DEFAULT "admin"');
+        await pool.query('ALTER TABLE Users ADD COLUMN ManagerID INT NULL');
+    } catch(e) { console.log('Users alter error or already exists:', e.message); }
+
+    try {
+        console.log('Updating abc to admin...');
+        await pool.query('UPDATE Users SET Role = "admin" WHERE Username = "abc"');
+    } catch(e) { console.log(e.message); }
+
+    try {
+        console.log('Creating Shifts table...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS Shifts (
+                ShiftID INT AUTO_INCREMENT PRIMARY KEY,
+                UserID INT NOT NULL,
+                ManagerID INT NOT NULL,
+                StartTime DATETIME NOT NULL,
+                EndTime DATETIME NULL,
+                StartingCash DECIMAL(12,2) DEFAULT 0,
+                EndingCash DECIMAL(12,2) NULL,
+                SystemCash DECIMAL(12,2) NULL,
+                TotalRevenue DECIMAL(12,2) DEFAULT 0,
+                Note TEXT NULL,
+                Status VARCHAR(20) DEFAULT 'OPEN'
+            )
+        `);
+    } catch(e) { console.log(e.message); }
+
+    try {
+        console.log('Creating Ingredients table...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS Ingredients (
+                IngredientID INT AUTO_INCREMENT PRIMARY KEY,
+                Name VARCHAR(100) NOT NULL,
+                Unit VARCHAR(20) NOT NULL,
+                CurrentStock DECIMAL(12,2) DEFAULT 0,
+                MinStockLevel DECIMAL(12,2) DEFAULT 0,
+                ManagerID INT NOT NULL,
+                Status INT DEFAULT 1
+            )
+        `);
+    } catch(e) { console.log(e.message); }
+
+    try {
+        console.log('Creating Recipes table...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS Recipes (
+                RecipeID INT AUTO_INCREMENT PRIMARY KEY,
+                ProductID INT NULL,
+                ToppingID INT NULL,
+                IngredientID INT NOT NULL,
+                Amount DECIMAL(10,2) NOT NULL,
+                ManagerID INT NOT NULL
+            )
+        `);
+    } catch(e) { console.log(e.message); }
+
+    try {
+        console.log('Creating InventoryLogs table...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS InventoryLogs (
+                LogID INT AUTO_INCREMENT PRIMARY KEY,
+                IngredientID INT NOT NULL,
+                ChangeAmount DECIMAL(12,2) NOT NULL,
+                Type VARCHAR(50) NOT NULL,
+                ReferenceID VARCHAR(50) NULL,
+                ManagerID INT NOT NULL,
+                CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CreatedBy INT NOT NULL
+            )
+        `);
+    } catch(e) { console.log(e.message); }
+
+    console.log('Database schema update finished.');
+    process.exit(0);
+})();

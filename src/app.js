@@ -10,11 +10,15 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Middleware to parse User-Id from headers
+// Middleware to parse User-Id and Staff-Id from headers
 app.use((req, res, next) => {
     const userId = req.headers['user-id'];
+    const staffId = req.headers['staff-id'];
     if (userId) {
         req.userId = parseInt(userId, 10);
+    }
+    if (staffId) {
+        req.staffId = parseInt(staffId, 10);
     }
     next();
 });
