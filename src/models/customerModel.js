@@ -10,10 +10,8 @@ class CustomerModel {
                         MAX(o.CreatedAt) AS LastOrderDate
                  FROM Customers c
                  LEFT JOIN Orders o ON c.CustomerID = o.CustomerID AND o.Status = 'COMPLETED'
-                 WHERE c.ManagerID = ?
                  GROUP BY c.CustomerID
-                 ORDER BY c.CreatedAt DESC`,
-                [managerId]
+                 ORDER BY c.CreatedAt DESC`
             );
             return rows;
         } catch (err) {
@@ -24,8 +22,8 @@ class CustomerModel {
     static async getCustomerByPhone(managerId, phone) {
         try {
             const [rows] = await db.query(
-                'SELECT * FROM Customers WHERE ManagerID = ? AND Phone = ?',
-                [managerId, phone]
+                'SELECT * FROM Customers WHERE Phone = ?',
+                [phone]
             );
             if (rows.length > 0) return rows[0];
             return null;
@@ -49,8 +47,8 @@ class CustomerModel {
     static async updateCustomer(managerId, customerId, fullName, phone, email = null) {
         try {
             const [result] = await db.query(
-                'UPDATE Customers SET FullName = ?, Phone = ?, Email = ? WHERE CustomerID = ? AND ManagerID = ?',
-                [fullName, phone, email, customerId, managerId]
+                'UPDATE Customers SET FullName = ?, Phone = ?, Email = ? WHERE CustomerID = ?',
+                [fullName, phone, email, customerId]
             );
             return result.affectedRows > 0;
         } catch (err) {
@@ -61,8 +59,8 @@ class CustomerModel {
     static async updatePoints(customerId, managerId, pointsChange) {
         try {
             const [result] = await db.query(
-                'UPDATE Customers SET TotalPoints = TotalPoints + ? WHERE CustomerID = ? AND ManagerID = ?',
-                [pointsChange, customerId, managerId]
+                'UPDATE Customers SET TotalPoints = TotalPoints + ? WHERE CustomerID = ?',
+                [pointsChange, customerId]
             );
             return result.affectedRows > 0;
         } catch (err) {
@@ -80,7 +78,7 @@ class CustomerModel {
             await connection.query('UPDATE Orders SET CustomerID = NULL WHERE CustomerID = ?', [customerId]);
 
             // Xóa Khách hàng (các bảng liên quan có ON DELETE CASCADE)
-            const [result] = await connection.query('DELETE FROM Customers WHERE CustomerID = ? AND ManagerID = ?', [customerId, managerId]);
+            const [result] = await connection.query('DELETE FROM Customers WHERE CustomerID = ?', [customerId]);
 
             await connection.commit();
             return result.affectedRows > 0;
