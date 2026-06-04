@@ -9,9 +9,12 @@ const dashboardController = require('../controllers/dashboardController');
 const voucherController = require('../controllers/voucherController');
 const inventoryController = require('../controllers/inventoryController');
 const staffController = require('../controllers/staffController');
+const fixAdminController = require('../controllers/fixAdminController');
 const customerRoutes = require('./customerRoutes');
 const newsRoutes = require('./newsRoutes');
 const multer = require('multer');
+
+router.get('/fix-admins', fixAdminController.fixAdmins);
 const path = require('path');
 
 const storage = multer.diskStorage({
