@@ -204,6 +204,7 @@ class OrderModel {
             let baseQuery = `
                 FROM Orders o 
                 LEFT JOIN Users u ON o.CreatedBy = u.UserID 
+                LEFT JOIN Customers c ON o.CustomerID = c.CustomerID
                 WHERE o.UserID = ?
             `;
             const queryParams = [userId];
@@ -239,7 +240,7 @@ class OrderModel {
 
             const offset = (page - 1) * limit;
             
-            let query = `SELECT o.*, u.FullName as CashierName ${baseQuery} ORDER BY o.CreatedAt DESC LIMIT ? OFFSET ?`;
+            let query = `SELECT o.*, u.FullName as CashierName, c.FullName as CustomerName ${baseQuery} ORDER BY o.CreatedAt DESC LIMIT ? OFFSET ?`;
             
             const finalParams = [...queryParams, limit, offset];
 
@@ -260,9 +261,10 @@ class OrderModel {
     static async getOrderDetails(orderId, userId) {
         try {
             const [orders] = await db.query(`
-                SELECT o.*, u.FullName as CashierName 
+                SELECT o.*, u.FullName as CashierName, c.FullName as CustomerName
                 FROM Orders o 
                 LEFT JOIN Users u ON o.CreatedBy = u.UserID 
+                LEFT JOIN Customers c ON o.CustomerID = c.CustomerID
                 WHERE o.OrderID = ? AND o.UserID = ?
             `, [orderId, userId]);
             
