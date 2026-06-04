@@ -109,16 +109,16 @@ class OrderModel {
         finalTotalAmount = originalTotalAmount - discountAmount;
         if (finalTotalAmount < 0) finalTotalAmount = 0;
 
-        return { finalTotalAmount, processedItems };
+        return { originalTotalAmount, finalTotalAmount, discountAmount, processedItems };
     }
 
-    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED', customerId = null, pointsUsed = 0) {
+    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED', customerId = null, pointsUsed = 0, orderType = 'Tại chỗ') {
         let connection;
         try {
             connection = await db.getConnection();
             await connection.beginTransaction();
 
-            let { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
+            let { originalTotalAmount, finalTotalAmount, discountAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
 
             let discountFromPoints = 0;
             if (customerId && pointsUsed > 0) {
@@ -140,9 +140,11 @@ class OrderModel {
                 }
             }
 
+            const discountAmount = originalTotalAmount - (finalTotalAmount + discountFromPoints);
+
             const [orderResult] = await connection.query(
-                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status, CreatedBy, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [managerId, finalTotalAmount, paymentMethod, 'IN_PROGRESS', staffId, customerId, pointsEarned, pointsUsed, discountFromPoints]
+                'INSERT INTO Orders (UserID, TotalAmount, FinalAmount, DiscountAmount, PaymentMethod, Status, CreatedBy, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints, OrderType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [managerId, originalTotalAmount, finalTotalAmount, discountAmount > 0 ? discountAmount : 0, paymentMethod, 'IN_PROGRESS', staffId, customerId, pointsEarned, pointsUsed, discountFromPoints, orderType]
             );
             const orderId = orderResult.insertId;
 

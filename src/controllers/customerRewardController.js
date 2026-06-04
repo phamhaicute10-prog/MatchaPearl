@@ -2,8 +2,8 @@ const pool = require('../config/db');
 
 exports.getAvailableRewards = async (req, res) => {
     try {
-        // Chỉ lấy các Voucher có yêu cầu đổi điểm (PointsRequired > 0)
-        const [rows] = await pool.query('SELECT * FROM Vouchers WHERE PointsRequired > 0 AND IsActive = 1 AND (ExpiryDate IS NULL OR ExpiryDate > NOW())');
+        // Lấy tất cả voucher đang hoạt động, gán mặc định 10 điểm nếu chưa có
+        const [rows] = await pool.query('SELECT VoucherID, Code, Description AS Title, DiscountValue, DiscountType, ExpiryDate, IFNULL(NULLIF(PointsRequired, 0), 10) as PointsRequired, Status as IsActive FROM Vouchers WHERE Status = 1');
         res.json({ success: true, data: rows });
     } catch (err) {
         console.error('Get rewards error:', err);
@@ -23,10 +23,11 @@ exports.exchangeReward = async (req, res) => {
         await connection.beginTransaction();
 
         // Kiểm tra Voucher
-        const [vRows] = await connection.query('SELECT PointsRequired, Title FROM Vouchers WHERE VoucherID = ? AND IsActive = 1', [voucherId]);
+        const [vRows] = await connection.query('SELECT PointsRequired, Description AS Title FROM Vouchers WHERE VoucherID = ? AND Status = 1', [voucherId]);
         if (vRows.length === 0) throw new Error('Voucher không tồn tại hoặc đã hết hạn');
         
-        const pointsRequired = vRows[0].PointsRequired;
+        let pointsRequired = vRows[0].PointsRequired;
+        if (!pointsRequired || pointsRequired === 0) pointsRequired = 10;
 
         // Kiểm tra Điểm Khách hàng
         const [cRows] = await connection.query('SELECT TotalPoints FROM Customers WHERE CustomerID = ?', [customerId]);
@@ -67,7 +68,7 @@ exports.getMyVouchers = async (req, res) => {
 
         const [rows] = await pool.query(`
             SELECT cv.CustomerVoucherID, cv.Status, cv.ReceivedDate, cv.UsedDate,
-                   v.VoucherID, v.Code, v.Title, v.DiscountValue, v.DiscountType, v.ExpiryDate
+                   v.VoucherID, v.Code, v.Description AS Title, v.DiscountValue, v.DiscountType, v.ExpiryDate
             FROM CustomerVouchers cv
             JOIN Vouchers v ON cv.VoucherID = v.VoucherID
             WHERE cv.CustomerID = ?
