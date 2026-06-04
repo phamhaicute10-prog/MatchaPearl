@@ -7,6 +7,7 @@ const apiRoutes = require('./routes/apiRoutes');
 const updateSchema = require('../update_schema');
 const updatePointsSchema = require('../update_points_schema');
 const updateCustomerSchema = require('../update_customer_schema');
+const updateCostSchema = require('../update_cost_schema');
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,8 @@ const PORT = process.env.PORT || 3000;
 
 updateSchema().then(() => {
     return updatePointsSchema();
+}).then(() => {
+    return updateCostSchema();
 }).then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server running on port ${PORT}`);

@@ -43,9 +43,7 @@ async function updateCostSchema() {
         
     } catch (err) {
         console.error('Lỗi khi cập nhật schema chi phí:', err);
-    } finally {
-        process.exit(0);
     }
 }
 
-updateCostSchema();
+module.exports = updateCostSchema;
