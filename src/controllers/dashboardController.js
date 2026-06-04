@@ -49,6 +49,7 @@ exports.getDashboardData = async (req, res) => {
             const [topItems] = await db.query(`
                 SELECT 
                     IFNULL(p.ProductName, t.ToppingName) as ItemName,
+                    IFNULL(p.Image, t.Image) as Image,
                     SUM(oi.Quantity) as TotalSold,
                     SUM(oi.SubTotal) as TotalRevenue
                 FROM OrderItems oi
@@ -135,6 +136,7 @@ exports.getDashboardData = async (req, res) => {
         const [topItems] = await db.query(`
             SELECT 
                 IFNULL(p.ProductName, t.ToppingName) as ItemName,
+                IFNULL(p.Image, t.Image) as Image,
                 SUM(oi.Quantity) as TotalSold,
                 SUM(oi.SubTotal) as TotalRevenue
             FROM OrderItems oi
