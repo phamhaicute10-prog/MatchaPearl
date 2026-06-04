@@ -54,6 +54,18 @@ exports.importStock = async (req, res) => {
     }
 };
 
+exports.adjustStock = async (req, res) => {
+    try {
+        const managerId = req.userId;
+        const userId = req.staffId || req.userId;
+        const { diffAmount } = req.body;
+        await InventoryModel.adjustStock(req.params.id, diffAmount, managerId, userId);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 exports.getRecipes = async (req, res) => {
     try {
         const managerId = req.userId;

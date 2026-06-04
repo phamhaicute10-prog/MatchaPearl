@@ -57,6 +57,31 @@ class InventoryModel {
         }
     }
 
+    static async adjustStock(ingredientId, diffAmount, managerId, userId) {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            await connection.query(
+                'UPDATE Ingredients SET CurrentStock = CurrentStock + ? WHERE IngredientID = ? AND ManagerID = ?',
+                [diffAmount, ingredientId, managerId]
+            );
+
+            await connection.query(
+                'INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, TotalCost, ManagerID, CreatedBy) VALUES (?, ?, ?, ?, ?, ?)',
+                [ingredientId, diffAmount, 'CHECK', 0, managerId, userId]
+            );
+
+            await connection.commit();
+            return true;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
     static async getRecipesByProduct(productId, managerId) {
         const [rows] = await db.query(
             'SELECT r.*, i.Name as IngredientName, i.Unit FROM Recipes r JOIN Ingredients i ON r.IngredientID = i.IngredientID WHERE r.ProductID = ? AND r.ManagerID = ?',

@@ -73,6 +73,7 @@ router.post('/inventory/ingredients', inventoryController.addIngredient);
 router.put('/inventory/ingredients/:id', inventoryController.updateIngredient);
 router.delete('/inventory/ingredients/:id', inventoryController.deleteIngredient);
 router.post('/inventory/ingredients/:id/import', inventoryController.importStock);
+router.post('/inventory/ingredients/:id/adjust', inventoryController.adjustStock);
 router.get('/inventory/recipes/:productId', inventoryController.getRecipes);
 router.post('/inventory/recipes/:productId', inventoryController.addRecipe);
 router.delete('/inventory/recipes/:recipeId', inventoryController.deleteRecipe);
