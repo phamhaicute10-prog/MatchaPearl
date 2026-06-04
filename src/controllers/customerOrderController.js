@@ -99,7 +99,7 @@ exports.createOnlineOrder = async (req, res) => {
     } catch (err) {
         if (connection) await connection.rollback();
         console.error('Online order error:', err);
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đặt hàng' });
+        res.status(500).json({ success: false, message: err.message || 'Lỗi máy chủ khi đặt hàng' });
     } finally {
         if (connection) connection.release();
     }

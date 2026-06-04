@@ -1,38 +1,23 @@
+const db = require('./src/config/db');
+const OrderModel = require('./src/models/orderModel');
+
 async function testOrder() {
     try {
-        const payload = {
-            paymentMethod: "Tiền mặt",
-            items: [
-                {
-                    productId: 8, // Trà Đào
-                    sugarLevel: "100%",
-                    iceLevel: "100%",
-                    quantity: 3,
-                    toppings: [
-                        { toppingId: 4, price: 10000 },
-                        { toppingId: 5, price: 1000 }
-                    ]
-                }
-            ],
-            status: "COMPLETED",
-            customerId: null,
-            pointsUsed: 0
-        };
-
-        const res = await fetch('http://127.0.0.1:3000/api/orders', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'user-id': '2', // Admin user abc
-                'staff-id': '4' // Staff user1
-            },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        console.log("RESPONSE:", res.status, data);
+        const managerId = 1;
+        const staffId = 1;
+        const items = [{
+            productId: 1, // Assuming 1 is a valid product ID
+            quantity: 3,
+            sugarLevel: '100%',
+            iceLevel: '100%',
+            toppings: []
+        }];
+        const orderId = await OrderModel.createOrder(managerId, staffId, 'CASH', items, null, 'COMPLETED', null, 0, 'Tại chỗ');
+        console.log('Order created:', orderId);
     } catch (e) {
-        console.error("ERROR:", e);
+        console.error('Error creating order:', e);
+    } finally {
+        process.exit(0);
     }
 }
-
 testOrder();
