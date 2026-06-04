@@ -7,7 +7,6 @@ const orderController = require('../controllers/orderController');
 const paymentController = require('../controllers/paymentController');
 const dashboardController = require('../controllers/dashboardController');
 const voucherController = require('../controllers/voucherController');
-const shiftController = require('../controllers/shiftController');
 const inventoryController = require('../controllers/inventoryController');
 const staffController = require('../controllers/staffController');
 const customerRoutes = require('./customerRoutes');
@@ -65,12 +64,7 @@ router.get('/payment/status/:orderCode', paymentController.checkPaymentStatus);
 // Report Routes
 router.get('/reports/dashboard', dashboardController.getDashboardData);
 
-// Shift Routes
-router.post('/shifts/open', shiftController.openShift);
-router.post('/shifts/close', shiftController.closeShift);
-router.get('/shifts/current', shiftController.getCurrentShift);
-router.get('/shifts', shiftController.getShifts);
-router.get('/shifts/:shiftId/report', shiftController.getShiftReport);
+
 
 // Inventory Routes
 router.get('/inventory/ingredients', inventoryController.getIngredients);

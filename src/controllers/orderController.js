@@ -49,8 +49,7 @@ exports.getOrders = async (req, res) => {
             status: req.query.status,
             startDate: req.query.startDate,
             endDate: req.query.endDate,
-            search: req.query.search,
-            shiftId: req.query.shiftId
+            search: req.query.search
         };
         const result = await OrderModel.getOrders(filters, req.userId);
         res.status(200).json({ success: true, ...result });

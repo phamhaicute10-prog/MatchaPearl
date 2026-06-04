@@ -140,25 +140,11 @@ class OrderModel {
                 }
             }
 
-            // Find active shift for the staff
-            const [shiftRows] = await connection.query(
-                "SELECT ShiftID FROM Shifts WHERE ManagerID = ? AND UserID = ? AND Status = 'OPEN' LIMIT 1",
-                [managerId, staffId]
-            );
-            const shiftId = shiftRows.length > 0 ? shiftRows[0].ShiftID : null;
-
             const [orderResult] = await connection.query(
-                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status, CreatedBy, ShiftID, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [managerId, finalTotalAmount, paymentMethod, status, staffId, shiftId, customerId, pointsEarned, pointsUsed, discountFromPoints]
+                'INSERT INTO Orders (UserID, TotalAmount, PaymentMethod, Status, CreatedBy, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [managerId, finalTotalAmount, paymentMethod, 'IN_PROGRESS', staffId, customerId, pointsEarned, pointsUsed, discountFromPoints]
             );
             const orderId = orderResult.insertId;
-
-            if (shiftId) {
-                await connection.query(
-                    'UPDATE Shifts SET TotalRevenue = TotalRevenue + ? WHERE ShiftID = ?',
-                    [finalTotalAmount, shiftId]
-                );
-            }
 
             for (const item of processedItems) {
                 const [itemResult] = await connection.query(
@@ -209,7 +195,7 @@ class OrderModel {
 
     static async getOrders(filters = {}, userId) {
         try {
-            let { page = 1, limit = 10, status, startDate, endDate, search, shiftId } = filters;
+            let { page = 1, limit = 10, status, startDate, endDate, search } = filters;
             page = parseInt(page) || 1;
             limit = parseInt(limit) || 10;
 
@@ -219,12 +205,6 @@ class OrderModel {
                 WHERE o.UserID = ?
             `;
             const queryParams = [userId];
-
-            if (shiftId) {
-                // Lấy đơn hàng của ca hiện tại, HOẶC đơn hàng online (khách tự đặt) chưa có ca
-                baseQuery += ` AND (o.ShiftID = ? OR (o.ShiftID IS NULL AND o.CreatedBy IS NULL))`;
-                queryParams.push(shiftId);
-            }
 
             if (status && status !== 'Tất cả trạng thái' && status !== 'Tất cả') {
                 let statusVal = status;
