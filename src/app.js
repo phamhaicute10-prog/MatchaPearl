@@ -8,7 +8,6 @@ const updateSchema = require('../update_schema');
 const updatePointsSchema = require('../update_points_schema');
 const updateCustomerSchema = require('../update_customer_schema');
 const updateCostSchema = require('../update_cost_schema');
-const fixOldOrders = require('../fix_old_orders');
 
 const app = express();
 app.use(cors());
@@ -37,8 +36,6 @@ updateSchema().then(() => {
     return updatePointsSchema();
 }).then(() => {
     return updateCostSchema();
-}).then(() => {
-    return fixOldOrders();
 }).then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server running on port ${PORT}`);
