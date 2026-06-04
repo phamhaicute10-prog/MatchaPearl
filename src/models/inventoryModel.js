@@ -32,7 +32,7 @@ class InventoryModel {
         return result.affectedRows;
     }
 
-    static async importStock(ingredientId, amount, managerId, userId) {
+    static async importStock(ingredientId, amount, totalCost, managerId, userId) {
         const connection = await db.getConnection();
         try {
             await connection.beginTransaction();
@@ -43,8 +43,8 @@ class InventoryModel {
             );
 
             await connection.query(
-                'INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ManagerID, CreatedBy) VALUES (?, ?, ?, ?, ?)',
-                [ingredientId, amount, 'IMPORT', managerId, userId]
+                'INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, TotalCost, ManagerID, CreatedBy) VALUES (?, ?, ?, ?, ?, ?)',
+                [ingredientId, amount, 'IMPORT', totalCost, managerId, userId]
             );
 
             await connection.commit();

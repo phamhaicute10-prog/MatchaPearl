@@ -46,8 +46,8 @@ exports.importStock = async (req, res) => {
     try {
         const managerId = req.userId;
         const userId = req.staffId || req.userId;
-        const { amount } = req.body;
-        await InventoryModel.importStock(req.params.id, amount, managerId, userId);
+        const { amount, totalCost } = req.body;
+        await InventoryModel.importStock(req.params.id, amount, totalCost || 0, managerId, userId);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

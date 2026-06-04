@@ -61,8 +61,9 @@ router.delete('/vouchers/:id', voucherController.deleteVoucher);
 router.post('/payment/create-payos-link', paymentController.createPaymentLink);
 router.get('/payment/status/:orderCode', paymentController.checkPaymentStatus);
 
-// Report Routes
-router.get('/reports/dashboard', dashboardController.getDashboardData);
+// Dashboard/Reports
+router.get('/reports/dashboard', verifyToken, dashboardController.getDashboardData);
+router.get('/reports/overview', verifyToken, dashboardController.getOverviewData);
 
 
 

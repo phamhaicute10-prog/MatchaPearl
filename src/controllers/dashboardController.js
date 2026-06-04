@@ -163,3 +163,80 @@ exports.getDashboardData = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+exports.getOverviewData = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        let start, end;
+        
+        if (startDate && endDate) {
+            start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            const today = new Date();
+            start = new Date(today);
+            start.setDate(today.getDate() - 6); // Default 7 days
+            start.setHours(0, 0, 0, 0);
+            end = new Date(today);
+            end.setHours(23, 59, 59, 999);
+        }
+
+        // 1. Get total revenue in range
+        const [orders] = await db.query(`
+            SELECT SUM(TotalAmount) as TotalRevenue 
+            FROM Orders 
+            WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt <= ? AND UserID = ?
+        `, [start, end, req.userId]);
+        const totalRevenue = parseFloat(orders[0].TotalRevenue || 0);
+
+        // 2. Get total cost in range
+        const [logs] = await db.query(`
+            SELECT SUM(TotalCost) as TotalCost 
+            FROM InventoryLogs 
+            WHERE (Type = 'IMPORT' OR Type = 'INITIAL_STOCK') AND CreatedAt >= ? AND CreatedAt <= ? AND ManagerID = ?
+        `, [start, end, req.userId]);
+        const totalCost = parseFloat(logs[0].TotalCost || 0);
+
+        // 3. Generate chart data (Revenue vs Cost)
+        const chartData = [];
+        const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        const daysToIterate = Math.min(diffDays, 31);
+        
+        for (let i = 0; i < daysToIterate; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            const nextD = new Date(d);
+            nextD.setDate(d.getDate() + 1);
+
+            const [dayOrders] = await db.query(`
+                SELECT SUM(TotalAmount) as revenue
+                FROM Orders
+                WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt < ? AND UserID = ?
+            `, [d, nextD, req.userId]);
+            
+            const [dayLogs] = await db.query(`
+                SELECT SUM(TotalCost) as cost
+                FROM InventoryLogs
+                WHERE (Type = 'IMPORT' OR Type = 'INITIAL_STOCK') AND CreatedAt >= ? AND CreatedAt < ? AND ManagerID = ?
+            `, [d, nextD, req.userId]);
+
+            const revenue = dayOrders[0].revenue ? parseFloat(dayOrders[0].revenue) : 0;
+            const cost = dayLogs[0].cost ? parseFloat(dayLogs[0].cost) : 0;
+            const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+            
+            chartData.push({ date: dateStr, revenue, cost });
+        }
+
+        res.status(200).json({
+            success: true,
+            totalRevenue,
+            totalCost,
+            netProfit: totalRevenue - totalCost,
+            chartData
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
