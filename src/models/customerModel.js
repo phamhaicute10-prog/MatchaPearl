@@ -7,7 +7,12 @@ class CustomerModel {
                 `SELECT c.*, 
                         COUNT(o.OrderID) AS OrderCount, 
                         COALESCE(SUM(o.FinalAmount), 0) AS TotalSpent, 
-                        MAX(o.CreatedAt) AS LastOrderDate
+                        MAX(o.CreatedAt) AS LastOrderDate,
+                        CASE 
+                            WHEN c.TotalPoints >= 60 THEN 'Vàng'
+                            WHEN c.TotalPoints >= 30 THEN 'Bạc'
+                            ELSE 'Đồng'
+                        END AS MembershipLevel
                  FROM Customers c
                  LEFT JOIN Orders o ON c.CustomerID = o.CustomerID AND o.Status = 'COMPLETED'
                  GROUP BY c.CustomerID
@@ -22,7 +27,13 @@ class CustomerModel {
     static async getCustomerByPhone(managerId, phone) {
         try {
             const [rows] = await db.query(
-                'SELECT * FROM Customers WHERE Phone = ?',
+                `SELECT *,
+                        CASE 
+                            WHEN TotalPoints >= 60 THEN 'Vàng'
+                            WHEN TotalPoints >= 30 THEN 'Bạc'
+                            ELSE 'Đồng'
+                        END AS MembershipLevel
+                 FROM Customers WHERE Phone = ?`,
                 [phone]
             );
             if (rows.length > 0) return rows[0];

@@ -58,9 +58,41 @@ exports.createOnlineOrder = async (req, res) => {
                         'INSERT INTO OrderItemToppings (OrderItemID, ToppingID, PriceAtOrder) VALUES (?, ?, ?)',
                         [orderItemId, t.toppingId, t.price]
                     );
+
+                    // Trừ kho cho topping
+                    const [toppingRecipes] = await connection.query('SELECT IngredientID, Amount FROM Recipes WHERE ToppingID = ? AND ManagerID = ?', [t.toppingId, managerId]);
+                    for (const recipe of toppingRecipes) {
+                        const totalDeduct = recipe.Amount * item.quantity;
+                        const [updateResult] = await connection.query('UPDATE Ingredients SET CurrentStock = CurrentStock - ? WHERE IngredientID = ? AND ManagerID = ? AND CurrentStock >= ?', [totalDeduct, recipe.IngredientID, managerId, totalDeduct]);
+                        if (updateResult.affectedRows === 0) {
+                            throw new Error('Không đủ nguyên liệu trong kho để làm topping!');
+                        }
+                        await connection.query("INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, 'SALE', ?, ?, NULL)", [recipe.IngredientID, -totalDeduct, orderId, managerId]);
+                    }
+                }
+            }
+
+            // Trừ kho cho món chính (nếu không phải topping lẻ)
+            if (!item.isStandaloneTopping) {
+                const [productRecipes] = await connection.query('SELECT IngredientID, Amount FROM Recipes WHERE ProductID = ? AND ManagerID = ?', [dbProductId, managerId]);
+                for (const recipe of productRecipes) {
+                    const totalDeduct = recipe.Amount * item.quantity;
+                    const [updateResult] = await connection.query('UPDATE Ingredients SET CurrentStock = CurrentStock - ? WHERE IngredientID = ? AND ManagerID = ? AND CurrentStock >= ?', [totalDeduct, recipe.IngredientID, managerId, totalDeduct]);
+                    if (updateResult.affectedRows === 0) {
+                        throw new Error('Không đủ nguyên liệu trong kho để làm món này!');
+                    }
+                    await connection.query("INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, 'SALE', ?, ?, NULL)", [recipe.IngredientID, -totalDeduct, orderId, managerId]);
                 }
             }
         }
+
+        // 6. Tích điểm thưởng (VD: 10.000 VNĐ = 1 điểm)
+        const pointsEarned = Math.floor(finalTotalAmount / 10000);
+        if (pointsEarned > 0) {
+            await connection.query('UPDATE Customers SET TotalPoints = TotalPoints + ? WHERE CustomerID = ?', [pointsEarned, customerId]);
+            await connection.query("INSERT INTO PointHistory (CustomerID, PointsChange, Type, Reason) VALUES (?, ?, 'Tích điểm', ?)", [customerId, pointsEarned, 'Mua hàng online: ORD-' + orderId]);
+        }
+
 
         await connection.commit();
         res.status(201).json({ success: true, message: 'Đặt hàng thành công', orderId });

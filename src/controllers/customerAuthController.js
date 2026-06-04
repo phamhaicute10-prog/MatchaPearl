@@ -55,7 +55,14 @@ exports.login = async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            'SELECT CustomerID, FullName, Phone, Email, TotalPoints, MembershipLevel, Birthday, Gender FROM Customers WHERE Email = ? AND PasswordHash = ?',
+            `SELECT CustomerID, FullName, Phone, Email, TotalPoints, 
+                    CASE 
+                        WHEN TotalPoints >= 60 THEN 'Vàng'
+                        WHEN TotalPoints >= 30 THEN 'Bạc'
+                        ELSE 'Đồng'
+                    END AS MembershipLevel, 
+                    Birthday, Gender 
+             FROM Customers WHERE Email = ? AND PasswordHash = ?`,
             [email, password]
         );
 
@@ -84,7 +91,14 @@ exports.getMe = async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            'SELECT CustomerID, FullName, Phone, Email, TotalPoints, MembershipLevel, Birthday, Gender FROM Customers WHERE CustomerID = ?',
+            `SELECT CustomerID, FullName, Phone, Email, TotalPoints, 
+                    CASE 
+                        WHEN TotalPoints >= 60 THEN 'Vàng'
+                        WHEN TotalPoints >= 30 THEN 'Bạc'
+                        ELSE 'Đồng'
+                    END AS MembershipLevel, 
+                    Birthday, Gender 
+             FROM Customers WHERE CustomerID = ?`,
             [customerId]
         );
 

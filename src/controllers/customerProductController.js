@@ -11,7 +11,12 @@ exports.getPublicCategories = async (req, res) => {
 
 exports.getPublicProducts = async (req, res) => {
     try {
-        const [products] = await db.query('SELECT * FROM Products WHERE Status = 1');
+        const [products] = await db.query(`
+            SELECT p.*, c.CategoryName 
+            FROM Products p
+            LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+            WHERE p.Status = 1
+        `);
         res.json(products);
     } catch (err) {
         res.status(500).json({ error: err.message });
