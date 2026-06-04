@@ -16,6 +16,9 @@ router.get('/me', customerAuthController.getMe);
 router.get('/me/vouchers', customerRewardController.getMyVouchers);
 router.get('/me/point-history', customerRewardController.getPointHistory);
 router.get('/me/orders', customerOrderController.getMyOrders);
+router.get('/me/orders/:id', customerOrderController.getMyOrderDetails);
+router.put('/me/orders/:id/cancel', customerOrderController.cancelMyOrder);
+router.put('/me/orders/:id/complete', customerOrderController.completeMyOrder);
 
 router.get('/rewards', customerRewardController.getAvailableRewards);
 router.post('/rewards/exchange', customerRewardController.exchangeReward);

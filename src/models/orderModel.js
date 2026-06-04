@@ -227,8 +227,11 @@ class OrderModel {
 
             if (status && status !== 'Tất cả trạng thái' && status !== 'Tất cả') {
                 let statusVal = status;
-                if (status === 'Đã hoàn thành') statusVal = 'COMPLETED';
-                if (status === 'Đã hủy') statusVal = 'CANCELLED';
+                if (status === 'Chờ xác nhận' || status === 'PENDING') statusVal = 'PENDING';
+                if (status === 'Đang làm' || status === 'IN_PROGRESS') statusVal = 'IN_PROGRESS';
+                if (status === 'Đang giao' || status === 'DELIVERING') statusVal = 'DELIVERING';
+                if (status === 'Đã hoàn thành' || status === 'Hoàn thành' || status === 'COMPLETED') statusVal = 'COMPLETED';
+                if (status === 'Đã hủy' || status === 'CANCELLED') statusVal = 'CANCELLED';
                 baseQuery += ` AND o.Status = ?`;
                 queryParams.push(statusVal);
             }
