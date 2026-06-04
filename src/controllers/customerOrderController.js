@@ -78,7 +78,7 @@ exports.getMyOrders = async (req, res) => {
         const customerId = req.headers['customer-id'];
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
-        const [rows] = await db.query('SELECT * FROM Orders WHERE CustomerID = ? ORDER BY CreatedDate DESC', [customerId]);
+        const [rows] = await db.query('SELECT *, CreatedAt as CreatedDate FROM Orders WHERE CustomerID = ? ORDER BY CreatedAt DESC', [customerId]);
         res.json({ success: true, data: rows });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
@@ -91,7 +91,7 @@ exports.getMyOrderDetails = async (req, res) => {
         const orderId = req.params.id;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
-        const [orders] = await db.query('SELECT * FROM Orders WHERE OrderID = ? AND CustomerID = ?', [orderId, customerId]);
+        const [orders] = await db.query('SELECT *, CreatedAt as CreatedDate FROM Orders WHERE OrderID = ? AND CustomerID = ?', [orderId, customerId]);
         if (orders.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
         
         const order = orders[0];
