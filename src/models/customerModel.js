@@ -32,11 +32,11 @@ class CustomerModel {
         }
     }
 
-    static async createCustomer(managerId, fullName, phone, email = null) {
+    static async createCustomer(managerId, fullName, phone, email = null, password = null) {
         try {
             const [result] = await db.query(
-                'INSERT INTO Customers (ManagerID, FullName, Phone, Email, TotalPoints) VALUES (?, ?, ?, ?, 0)',
-                [managerId, fullName, phone, email]
+                'INSERT INTO Customers (ManagerID, FullName, Phone, Email, PasswordHash, TotalPoints) VALUES (?, ?, ?, ?, ?, 0)',
+                [managerId, fullName, phone, email, password]
             );
             return result.insertId;
         } catch (err) {
@@ -44,12 +44,17 @@ class CustomerModel {
         }
     }
 
-    static async updateCustomer(managerId, customerId, fullName, phone, email = null) {
+    static async updateCustomer(managerId, customerId, fullName, phone, email = null, password = null) {
         try {
-            const [result] = await db.query(
-                'UPDATE Customers SET FullName = ?, Phone = ?, Email = ? WHERE CustomerID = ?',
-                [fullName, phone, email, customerId]
-            );
+            let query = 'UPDATE Customers SET FullName = ?, Phone = ?, Email = ? WHERE CustomerID = ?';
+            let params = [fullName, phone, email, customerId];
+
+            if (password !== null && password.trim() !== '') {
+                query = 'UPDATE Customers SET FullName = ?, Phone = ?, Email = ?, PasswordHash = ? WHERE CustomerID = ?';
+                params = [fullName, phone, email, password, customerId];
+            }
+
+            const [result] = await db.query(query, params);
             return result.affectedRows > 0;
         } catch (err) {
             throw err;

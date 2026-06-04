@@ -27,7 +27,7 @@ exports.getCustomerByPhone = async (req, res) => {
 
 exports.createCustomer = async (req, res) => {
     try {
-        const { fullName, phone, email } = req.body;
+        const { fullName, phone, email, password } = req.body;
         if (!fullName || !phone) {
             return res.status(400).json({ success: false, message: 'FullName and Phone are required' });
         }
@@ -37,7 +37,7 @@ exports.createCustomer = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Phone number already registered' });
         }
         
-        const customerId = await CustomerModel.createCustomer(req.userId, fullName, phone, email);
+        const customerId = await CustomerModel.createCustomer(req.userId, fullName, phone, email, password);
         res.status(201).json({ success: true, message: 'Customer created', customerId });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -47,7 +47,7 @@ exports.createCustomer = async (req, res) => {
 exports.updateCustomer = async (req, res) => {
     try {
         const { id } = req.params;
-        const { fullName, phone, email } = req.body;
+        const { fullName, phone, email, password } = req.body;
         
         if (!fullName || !phone) {
             return res.status(400).json({ success: false, message: 'FullName and Phone are required' });
@@ -59,7 +59,7 @@ exports.updateCustomer = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Phone number already registered by another customer' });
         }
         
-        const success = await CustomerModel.updateCustomer(req.userId, id, fullName, phone, email);
+        const success = await CustomerModel.updateCustomer(req.userId, id, fullName, phone, email, password);
         if (success) {
             res.json({ success: true, message: 'Customer updated successfully' });
         } else {
