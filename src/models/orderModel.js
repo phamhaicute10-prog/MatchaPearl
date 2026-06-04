@@ -140,11 +140,11 @@ class OrderModel {
                 }
             }
 
-            const discountAmount = originalTotalAmount - (finalTotalAmount + discountFromPoints);
+            const totalDiscountAmount = originalTotalAmount - (finalTotalAmount + discountFromPoints);
 
             const [orderResult] = await connection.query(
                 'INSERT INTO Orders (UserID, TotalAmount, FinalAmount, DiscountAmount, PaymentMethod, Status, CreatedBy, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints, OrderType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [managerId, originalTotalAmount, finalTotalAmount, discountAmount > 0 ? discountAmount : 0, paymentMethod, 'IN_PROGRESS', staffId, customerId, pointsEarned, pointsUsed, discountFromPoints, orderType]
+                [managerId, originalTotalAmount, finalTotalAmount, totalDiscountAmount > 0 ? totalDiscountAmount : 0, paymentMethod, 'IN_PROGRESS', staffId, customerId, pointsEarned, pointsUsed, discountFromPoints, orderType]
             );
             const orderId = orderResult.insertId;
 
