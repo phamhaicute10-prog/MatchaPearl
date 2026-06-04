@@ -2,8 +2,8 @@ const pool = require('../config/db');
 
 exports.getAvailableRewards = async (req, res) => {
     try {
-        // Lấy tất cả voucher đang hoạt động, gán mặc định 10 điểm nếu chưa có
-        const [rows] = await pool.query('SELECT VoucherID, Code, Description AS Title, DiscountValue, DiscountType, ExpiryDate, IFNULL(NULLIF(PointsRequired, 0), 10) as PointsRequired, Status as IsActive FROM Vouchers WHERE Status = 1');
+        // Lấy tất cả voucher đang hoạt động, gán mặc định 30 điểm cho mỗi voucher vì Admin POS chưa có chỗ nhập
+        const [rows] = await pool.query('SELECT VoucherID, Code, Description AS Title, DiscountValue, DiscountType, NULL as ExpiryDate, 30 as PointsRequired, Status as IsActive FROM Vouchers WHERE Status = 1');
         res.json({ success: true, data: rows });
     } catch (err) {
         console.error('Get rewards error:', err);
@@ -23,11 +23,10 @@ exports.exchangeReward = async (req, res) => {
         await connection.beginTransaction();
 
         // Kiểm tra Voucher
-        const [vRows] = await connection.query('SELECT PointsRequired, Description AS Title FROM Vouchers WHERE VoucherID = ? AND Status = 1', [voucherId]);
+        const [vRows] = await connection.query('SELECT Description AS Title FROM Vouchers WHERE VoucherID = ? AND Status = 1', [voucherId]);
         if (vRows.length === 0) throw new Error('Voucher không tồn tại hoặc đã hết hạn');
         
-        let pointsRequired = vRows[0].PointsRequired;
-        if (!pointsRequired || pointsRequired === 0) pointsRequired = 10;
+        let pointsRequired = 30;
 
         // Kiểm tra Điểm Khách hàng
         const [cRows] = await connection.query('SELECT TotalPoints FROM Customers WHERE CustomerID = ?', [customerId]);
