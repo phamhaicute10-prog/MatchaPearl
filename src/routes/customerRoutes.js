@@ -14,6 +14,7 @@ router.post('/auth/register', customerAuthController.register);
 router.post('/auth/login', customerAuthController.login);
 router.get('/me', customerAuthController.getMe);
 router.put('/me', customerAuthController.updateMe);
+router.put('/me/password', customerAuthController.updatePassword);
 router.get('/me/vouchers', customerRewardController.getMyVouchers);
 router.get('/me/point-history', customerRewardController.getPointHistory);
 router.get('/me/orders', customerOrderController.getMyOrders);

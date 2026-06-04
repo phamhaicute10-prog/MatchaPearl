@@ -147,3 +147,32 @@ exports.updateMe = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+
+exports.updatePassword = async (req, res) => {
+    try {
+        const customerId = req.headers['customer-id'];
+        if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
+
+        const { oldPassword, newPassword } = req.body;
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu cũ và mới' });
+        }
+
+        const [rows] = await pool.query('SELECT PasswordHash FROM Customers WHERE CustomerID = ?', [customerId]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+        }
+
+        const currentPassword = rows[0].PasswordHash;
+        if (currentPassword !== oldPassword) {
+            return res.status(400).json({ success: false, message: 'Mật khẩu cũ không chính xác' });
+        }
+
+        await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [newPassword, customerId]);
+
+        res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+    } catch (err) {
+        console.error('Update password error:', err);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
+    }
+};
