@@ -23,7 +23,7 @@ exports.exchangeReward = async (req, res) => {
         await connection.beginTransaction();
 
         // Kiểm tra Voucher
-        const [vRows] = await connection.query('SELECT Description AS Title FROM Vouchers WHERE VoucherID = ? AND Status = 1', [voucherId]);
+        const [vRows] = await connection.query('SELECT Code, Description AS Title FROM Vouchers WHERE VoucherID = ? AND Status = 1', [voucherId]);
         if (vRows.length === 0) throw new Error('Voucher không tồn tại hoặc đã hết hạn');
         
         let pointsRequired = 10;
@@ -38,9 +38,10 @@ exports.exchangeReward = async (req, res) => {
         await connection.query('UPDATE Customers SET TotalPoints = TotalPoints - ? WHERE CustomerID = ?', [pointsRequired, customerId]);
 
         // Thêm vào Lịch sử điểm
+        const titleOrCode = vRows[0].Title || vRows[0].Code;
         await connection.query(
             "INSERT INTO PointHistory (CustomerID, PointsChange, Type, Reason) VALUES (?, ?, 'Đổi quà', ?)",
-            [customerId, -pointsRequired, `Đổi điểm lấy: ${vRows[0].Title}`]
+            [customerId, -pointsRequired, `Đổi điểm lấy: ${titleOrCode}`]
         );
 
         // Thêm Voucher vào ví Khách hàng
@@ -67,7 +68,7 @@ exports.getMyVouchers = async (req, res) => {
 
         const [rows] = await pool.query(`
             SELECT cv.CustomerVoucherID, cv.Status, cv.ReceivedDate, cv.UsedDate,
-                   v.VoucherID, v.Code, v.Description AS Title, v.DiscountValue, v.DiscountType, v.ExpiryDate
+                   v.VoucherID, v.Code, v.Description AS Title, v.DiscountValue, v.DiscountType, NULL as ExpiryDate
             FROM CustomerVouchers cv
             JOIN Vouchers v ON cv.VoucherID = v.VoucherID
             WHERE cv.CustomerID = ?
