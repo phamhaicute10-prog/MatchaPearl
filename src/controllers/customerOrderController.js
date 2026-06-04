@@ -67,7 +67,7 @@ exports.createOnlineOrder = async (req, res) => {
                         if (updateResult.affectedRows === 0) {
                             throw new Error('Không đủ nguyên liệu trong kho để làm topping!');
                         }
-                        await connection.query("INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, 'SALE', ?, ?, NULL)", [recipe.IngredientID, -totalDeduct, orderId, managerId]);
+                        await connection.query("INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, 'SALE', ?, ?, ?)", [recipe.IngredientID, -totalDeduct, orderId, managerId, managerId]);
                     }
                 }
             }
@@ -81,7 +81,7 @@ exports.createOnlineOrder = async (req, res) => {
                     if (updateResult.affectedRows === 0) {
                         throw new Error('Không đủ nguyên liệu trong kho để làm món này!');
                     }
-                    await connection.query("INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, 'SALE', ?, ?, NULL)", [recipe.IngredientID, -totalDeduct, orderId, managerId]);
+                    await connection.query("INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, 'SALE', ?, ?, ?)", [recipe.IngredientID, -totalDeduct, orderId, managerId, managerId]);
                 }
             }
         }
