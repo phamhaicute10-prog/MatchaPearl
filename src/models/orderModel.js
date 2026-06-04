@@ -221,7 +221,8 @@ class OrderModel {
             const queryParams = [userId];
 
             if (shiftId) {
-                baseQuery += ` AND o.ShiftID = ?`;
+                // Lấy đơn hàng của ca hiện tại, HOẶC đơn hàng online (khách tự đặt) chưa có ca
+                baseQuery += ` AND (o.ShiftID = ? OR (o.ShiftID IS NULL AND o.CreatedBy IS NULL))`;
                 queryParams.push(shiftId);
             }
 
