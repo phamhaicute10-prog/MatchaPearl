@@ -129,7 +129,7 @@ exports.getMyOrderDetails = async (req, res) => {
         const order = orders[0];
 
         const [items] = await db.query(`
-            SELECT oi.*, p.ProductName, p.BasePrice 
+            SELECT oi.*, p.ProductName, p.BasePrice, p.Image 
             FROM OrderItems oi
             LEFT JOIN Products p ON oi.ProductID = p.ProductID
             WHERE oi.OrderID = ?
@@ -140,7 +140,7 @@ exports.getMyOrderDetails = async (req, res) => {
             if (item.ProductID === null) {
                 // To find which topping it is, we look at OrderItemToppings since the topping itself is saved there
                 const [toppings] = await db.query(`
-                    SELECT oit.*, t.ToppingName, oit.PriceAtOrder as Price
+                    SELECT oit.*, t.ToppingName, oit.PriceAtOrder as Price, t.Image
                     FROM OrderItemToppings oit
                     JOIN Toppings t ON oit.ToppingID = t.ToppingID
                     WHERE oit.OrderItemID = ?
@@ -149,6 +149,7 @@ exports.getMyOrderDetails = async (req, res) => {
                 if (toppings.length > 0) {
                     item.ProductName = toppings[0].ToppingName;
                     item.BasePrice = toppings[0].Price;
+                    item.Image = toppings[0].Image;
                 }
                 item.toppings = [];
             } else {
