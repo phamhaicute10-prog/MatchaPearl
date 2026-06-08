@@ -46,16 +46,17 @@ async function updateSchema() {
     } catch(e) { console.log('Status error:', e.message); }
 
     try {
-        console.log('Updating abc to admin and changing password...');
-        // Đổi tên admin cũ thành admin_old để nhường chỗ
-        await pool.query("UPDATE Users SET Username = 'admin_old' WHERE Username = 'admin'");
+        console.log('Fixing admin account login issue...');
         
-        // Đổi tên abc thành admin và cập nhật mật khẩu
-        await pool.query("UPDATE Users SET Username = 'admin', Password = 'Quanly@2004' WHERE Username = 'abc'");
+        // 1. Phục hồi lại tên admin_old về admin (nếu lỡ đổi)
+        await pool.query("UPDATE Users SET Username = 'admin' WHERE Username = 'admin_old'");
         
-        // Cập nhật lại mật khẩu cho chắc chắn nếu abc đã đổi thành admin từ trước
+        // 2. Đổi tên abc thành abc_old để không bị nhầm lẫn
+        await pool.query("UPDATE Users SET Username = 'abc_old' WHERE Username = 'abc'");
+        
+        // 3. Cập nhật dứt điểm mật khẩu của admin thành Quanly@2004
         await pool.query("UPDATE Users SET Password = 'Quanly@2004' WHERE Username = 'admin'");
-    } catch(e) { console.log('Update admin error:', e.message); }
+    } catch(e) { console.log('Fix admin error:', e.message); }
 
     try {
         console.log('Creating Shifts table...');
