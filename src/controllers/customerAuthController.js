@@ -176,3 +176,51 @@ exports.updatePassword = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email' });
+        }
+
+        const [rows] = await pool.query('SELECT PasswordHash FROM Customers WHERE Email = ?', [email]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Email không tồn tại trong hệ thống' });
+        }
+
+        const customer = rows[0];
+        const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+
+        if (!scriptUrl) {
+            console.log("Cảnh báo: Chưa cấu hình GOOGLE_SCRIPT_URL.");
+            return res.json({ success: true, message: 'Đây là môi trường Test. Cần cấu hình GOOGLE_SCRIPT_URL trên Render.' });
+        }
+
+        console.log("Bắt đầu gọi Google Apps Script API cho email khách hàng:", email);
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                to: email,
+                subject: "Khôi phục mật khẩu - Matcha Pearl App",
+                html: `<p>Xin chào,</p><p>Bạn đã yêu cầu khôi phục mật khẩu cho ứng dụng <b>Matcha Pearl App</b>.</p><p>Mật khẩu hiện tại của bạn là: <b>${customer.PasswordHash}</b></p><p>Vui lòng đăng nhập bằng mật khẩu này và đổi mật khẩu mới để bảo vệ tài khoản.</p>`
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === "success") {
+            console.log("Email đã được gửi thành công!");
+            return res.json({ success: true, message: 'Mật khẩu đã được gửi vào email của bạn!' });
+        } else {
+            console.error("Google Apps Script báo lỗi:", result.message);
+            return res.status(500).json({ success: false, message: 'Không thể gửi email từ hệ thống' });
+        }
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
+    }
+};

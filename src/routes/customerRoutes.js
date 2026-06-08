@@ -12,6 +12,7 @@ router.get('/toppings', customerProductController.getPublicToppings);
 
 router.post('/auth/register', customerAuthController.register);
 router.post('/auth/login', customerAuthController.login);
+router.post('/auth/forgot-password', customerAuthController.forgotPassword);
 router.get('/me', customerAuthController.getMe);
 router.put('/me', customerAuthController.updateMe);
 router.put('/me/password', customerAuthController.updatePassword);
