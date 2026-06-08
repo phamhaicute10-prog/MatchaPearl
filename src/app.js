@@ -4,10 +4,6 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const apiRoutes = require('./routes/apiRoutes');
-const updateSchema = require('../update_schema');
-const updatePointsSchema = require('../update_points_schema');
-const updateCustomerSchema = require('../update_customer_schema');
-const updateCostSchema = require('../update_cost_schema');
 
 const app = express();
 app.use(cors());
@@ -32,16 +28,7 @@ app.use('/api', apiRoutes);
 
 const PORT = process.env.PORT || 3000;
 
-updateSchema().then(() => {
-    return updatePointsSchema();
-}).then(() => {
-    return updateCostSchema();
-}).then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`Accessible at: http://0.0.0.0:${PORT}`);
-    });
-}).catch(err => {
-    console.error('Failed to update schema', err);
-    process.exit(1);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Accessible at: http://0.0.0.0:${PORT}`);
 });
