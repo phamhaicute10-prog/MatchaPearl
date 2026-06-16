@@ -6,7 +6,7 @@ exports.createOnlineOrder = async (req, res) => {
     try {
         const { items, paymentMethod, orderType, shippingAddress, voucherId } = req.body;
         // Trích xuất customerId từ header (đã check ở auth middleware hoặc params)
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         
         if (!customerId || !items || items.length === 0) {
             return res.status(400).json({ success: false, message: 'Dữ liệu đơn hàng không hợp lệ' });
@@ -107,7 +107,7 @@ exports.createOnlineOrder = async (req, res) => {
 
 exports.getMyOrders = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
         const [rows] = await db.query('SELECT *, CreatedAt as CreatedDate FROM Orders WHERE CustomerID = ? ORDER BY CreatedAt DESC', [customerId]);
@@ -119,7 +119,7 @@ exports.getMyOrders = async (req, res) => {
 
 exports.getMyOrderDetails = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         const orderId = req.params.id;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
@@ -172,7 +172,7 @@ exports.getMyOrderDetails = async (req, res) => {
 
 exports.cancelMyOrder = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         const orderId = req.params.id;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
@@ -193,7 +193,7 @@ exports.cancelMyOrder = async (req, res) => {
 
 exports.completeMyOrder = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         const orderId = req.params.id;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
@@ -211,3 +211,4 @@ exports.completeMyOrder = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+

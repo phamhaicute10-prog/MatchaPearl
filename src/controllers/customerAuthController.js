@@ -122,7 +122,7 @@ exports.login = async (req, res) => {
 exports.getMe = async (req, res) => {
     try {
         // middleware JWT đã xử lý và gán req.customerId
-        const customerId = req.customerId || req.headers['customer-id'];
+        const customerId = req.customerId || req.customerId;
         
         if (!customerId) {
             return res.status(401).json({ success: false, message: 'Chưa xác thực' });
@@ -156,7 +156,7 @@ exports.getMe = async (req, res) => {
 
 exports.updateMe = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
         const { fullName, phone, email } = req.body;
@@ -188,7 +188,7 @@ exports.updateMe = async (req, res) => {
 
 exports.updatePassword = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
         const { oldPassword, newPassword } = req.body;
@@ -262,3 +262,4 @@ exports.forgotPassword = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+

@@ -15,7 +15,7 @@ exports.exchangeReward = async (req, res) => {
     let connection;
     try {
         const { voucherId } = req.body;
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         
         if (!customerId || !voucherId) return res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ' });
 
@@ -63,7 +63,7 @@ exports.exchangeReward = async (req, res) => {
 
 exports.getMyVouchers = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
         const [rows] = await pool.query(`
@@ -83,7 +83,7 @@ exports.getMyVouchers = async (req, res) => {
 
 exports.getPointHistory = async (req, res) => {
     try {
-        const customerId = req.headers['customer-id'];
+        const customerId = req.customerId;
         if (!customerId) return res.status(401).json({ success: false, message: 'Chưa xác thực' });
 
         const [rows] = await pool.query('SELECT * FROM PointHistory WHERE CustomerID = ? ORDER BY CreatedDate DESC', [customerId]);
@@ -92,3 +92,4 @@ exports.getPointHistory = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+
