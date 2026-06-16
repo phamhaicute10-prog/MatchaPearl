@@ -1,4 +1,6 @@
 const pool = require('../config/db');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.register = async (req, res) => {
     try {
@@ -29,6 +31,12 @@ exports.register = async (req, res) => {
             [managerId, fullName, phone, email, password] // Lưu plain text tạm thời
         );
 
+        const token = jwt.sign(
+            { customerId: result.insertId, role: 'customer' },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
         res.status(201).json({
             success: true,
             message: 'Đăng ký thành công',
@@ -38,7 +46,8 @@ exports.register = async (req, res) => {
                 Phone: phone,
                 Email: email,
                 MembershipLevel: 'Đồng'
-            }
+            },
+            token: token
         });
     } catch (err) {
         console.error('Customer register error:', err);
@@ -70,10 +79,17 @@ exports.login = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác' });
         }
 
+        const token = jwt.sign(
+            { customerId: rows[0].CustomerID, role: 'customer' },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
         res.json({
             success: true,
             message: 'Đăng nhập thành công',
-            customer: rows[0]
+            customer: rows[0],
+            token: token
         });
     } catch (err) {
         console.error('Customer login error:', err);
@@ -83,8 +99,8 @@ exports.login = async (req, res) => {
 
 exports.getMe = async (req, res) => {
     try {
-        // Trong thực tế sẽ lấy từ JWT token, ở đây dùng query/param tạm
-        const customerId = req.query.customerId || req.headers['customer-id'];
+        // middleware JWT đã xử lý và gán req.customerId
+        const customerId = req.customerId || req.headers['customer-id'];
         
         if (!customerId) {
             return res.status(401).json({ success: false, message: 'Chưa xác thực' });

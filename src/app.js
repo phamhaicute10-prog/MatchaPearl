@@ -4,24 +4,15 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const apiRoutes = require('./routes/apiRoutes');
+const { verifyToken } = require('./middleware/authMiddleware');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Middleware to parse User-Id and Staff-Id from headers
-app.use((req, res, next) => {
-    const userId = req.headers['user-id'];
-    const staffId = req.headers['staff-id'];
-    if (userId) {
-        req.userId = parseInt(userId, 10);
-    }
-    if (staffId) {
-        req.staffId = parseInt(staffId, 10);
-    }
-    next();
-});
+// Middleware JWT xac thuc
+app.use(verifyToken);
 
 // Load API Routes
 app.use('/api', apiRoutes);

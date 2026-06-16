@@ -1,4 +1,6 @@
 const pool = require('../config/db');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.login = async (req, res) => {
     try {
@@ -17,10 +19,17 @@ exports.login = async (req, res) => {
             return res.status(403).json({ message: 'Tài khoản của bạn đã bị vô hiệu hóa hoặc ngừng hoạt động.' });
         }
 
-        // Return user info. In a real app, return a JWT token here.
+        const token = jwt.sign(
+            { userId: rows[0].UserID, staffId: rows[0].UserID, role: rows[0].Role },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        // Return user info and JWT token
         res.json({
             message: 'Đăng nhập thành công',
-            user: rows[0]
+            user: rows[0],
+            token: token
         });
     } catch (error) {
         console.error('Login error:', error);
