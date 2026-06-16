@@ -3,6 +3,24 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'matchapearl_secret_key';
 
 const verifyToken = (req, res, next) => {
+    // Các đường dẫn được phép truy cập không cần token
+    const publicPaths = [
+        '/api/login',
+        '/api/register',
+        '/api/forgot-password',
+        '/api/customers/auth/login',
+        '/api/customers/auth/register',
+        '/api/customers/auth/forgot-password',
+        '/api/customers/categories',
+        '/api/customers/products',
+        '/api/customers/toppings',
+        '/api/news'
+    ];
+
+    if (publicPaths.some(p => req.path.startsWith(p))) {
+        return next();
+    }
+
     const authHeader = req.headers['authorization'];
     
     if (!authHeader) {
