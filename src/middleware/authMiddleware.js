@@ -5,18 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'matchapearl_secret_key';
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     
-    // N?u không có header Authorization, th? ki?m tra theo header c? ?? backward compatibility
-    // (Trong tr??ng h?p App ch?a k?p c?p nh?t)
     if (!authHeader) {
-        const legacyUserId = req.headers['user-id'];
-        const legacyStaffId = req.headers['staff-id'];
-        const legacyCustomerId = req.headers['customer-id'];
-        
-        if (legacyUserId) req.userId = parseInt(legacyUserId, 10);
-        if (legacyStaffId) req.staffId = parseInt(legacyStaffId, 10);
-        if (legacyCustomerId) req.customerId = parseInt(legacyCustomerId, 10);
-        
-        return next();
+        return res.status(401).json({ success: false, message: 'Không tìm thấy token xác thực' });
     }
 
     const token = authHeader.split(' ')[1]; // Format: "Bearer <token>"
