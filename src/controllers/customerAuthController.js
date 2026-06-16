@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.register = async (req, res) => {
@@ -26,9 +27,11 @@ exports.register = async (req, res) => {
         const [managers] = await pool.query("SELECT UserID FROM Users WHERE Role = 'admin' OR Role = 'manager' LIMIT 1");
         const managerId = managers.length > 0 ? managers[0].UserID : 0;
 
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const [result] = await pool.query(
             "INSERT INTO Customers (ManagerID, FullName, Phone, Email, PasswordHash, TotalPoints, MembershipLevel) VALUES (?, ?, ?, ?, ?, 0, 'Đồng')",
-            [managerId, fullName, phone, email, password] // Lưu plain text tạm thời
+            [managerId, fullName, phone, email, hashedPassword]
         );
 
         const token = jwt.sign(
@@ -70,17 +73,36 @@ exports.login = async (req, res) => {
                         WHEN TotalPoints >= 30 THEN 'Bạc'
                         ELSE 'Đồng'
                     END AS MembershipLevel, 
-                    Birthday, Gender 
-             FROM Customers WHERE Email = ? AND PasswordHash = ?`,
-            [email, password]
+                    Birthday, Gender, PasswordHash 
+             FROM Customers WHERE Email = ?`,
+            [email]
         );
 
         if (rows.length === 0) {
             return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác' });
         }
 
+        const customer = rows[0];
+        let isMatch = false;
+
+        if (customer.PasswordHash && (customer.PasswordHash.startsWith('$2b$') || customer.PasswordHash.startsWith('$2a$'))) {
+            isMatch = await bcrypt.compare(password, customer.PasswordHash);
+        } else {
+            // Lazy migration: Fallback to plain text
+            isMatch = (password === customer.PasswordHash);
+            if (isMatch) {
+                // Băm lại và lưu
+                const hashedPwd = await bcrypt.hash(password, 10);
+                await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [hashedPwd, customer.CustomerID]);
+            }
+        }
+
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác' });
+        }
+
         const token = jwt.sign(
-            { customerId: rows[0].CustomerID, role: 'customer' },
+            { customerId: customer.CustomerID, role: 'customer' },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -88,7 +110,7 @@ exports.login = async (req, res) => {
         res.json({
             success: true,
             message: 'Đăng nhập thành công',
-            customer: rows[0],
+            customer: { ...customer, PasswordHash: undefined },
             token: token
         });
     } catch (err) {

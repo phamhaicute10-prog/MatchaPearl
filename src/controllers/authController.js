@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.login = async (req, res) => {
@@ -9,26 +10,44 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
         }
 
-        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey, Avatar, Role, ManagerID, Status FROM Users WHERE Username = ? AND Password = ?', [username, password]);
+        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey, Avatar, Role, ManagerID, Status FROM Users WHERE Username = ?', [username]);
         
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
         }
 
-        if (rows[0].Status === 'inactive') {
+        const user = rows[0];
+        let isMatch = false;
+
+        if (user.Password.startsWith('$2b$') || user.Password.startsWith('$2a$')) {
+            isMatch = await bcrypt.compare(password, user.Password);
+        } else {
+            // Lazy migration: Fallback to plain text
+            isMatch = (password === user.Password);
+            if (isMatch) {
+                // Mật khẩu đúng, băm lại và lưu vào DB
+                const hashedPwd = await bcrypt.hash(password, 10);
+                await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [hashedPwd, user.UserID]);
+            }
+        }
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
+        }
+
+        if (user.Status === 'inactive') {
             return res.status(403).json({ message: 'Tài khoản của bạn đã bị vô hiệu hóa hoặc ngừng hoạt động.' });
         }
 
         const token = jwt.sign(
-            { userId: rows[0].UserID, staffId: rows[0].UserID, role: rows[0].Role },
+            { userId: user.UserID, staffId: user.UserID, role: user.Role },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
 
-        // Return user info and JWT token
         res.json({
             message: 'Đăng nhập thành công',
-            user: rows[0],
+            user: { ...user, Password: undefined },
             token: token
         });
     } catch (error) {
@@ -50,9 +69,11 @@ exports.register = async (req, res) => {
             return res.status(409).json({ message: 'Tên đăng nhập đã tồn tại' });
         }
 
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const [result] = await pool.query(
             'INSERT INTO Users (Username, Password, FullName, Phone, Email) VALUES (?, ?, ?, ?, ?)',
-            [username, password, fullName || null, phone || null, email || null]
+            [username, hashedPassword, fullName || null, phone || null, email || null]
         );
 
         res.status(201).json({
