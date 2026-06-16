@@ -39,8 +39,10 @@ exports.login = async (req, res) => {
             return res.status(403).json({ message: 'Tài khoản của bạn đã bị vô hiệu hóa hoặc ngừng hoạt động.' });
         }
 
+        const resolvedUserId = (user.Role === 'staff' && user.ManagerID) ? user.ManagerID : user.UserID;
+
         const token = jwt.sign(
-            { userId: user.UserID, staffId: user.UserID, role: user.Role },
+            { userId: resolvedUserId, staffId: user.UserID, role: user.Role },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
