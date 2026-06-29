@@ -183,20 +183,20 @@ exports.getOverviewData = async (req, res) => {
             end.setHours(23, 59, 59, 999);
         }
 
-        // 1. Get total revenue in range
+        // 1. Get total revenue in system (All time)
         const [orders] = await db.query(`
             SELECT SUM(TotalAmount) as TotalRevenue 
             FROM Orders 
-            WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt <= ? AND UserID = ?
-        `, [start, end, req.userId]);
+            WHERE Status = 'COMPLETED' AND UserID = ?
+        `, [req.userId]);
         const totalRevenue = parseFloat(orders[0].TotalRevenue || 0);
 
-        // 2. Get total cost in range
+        // 2. Get total cost in system (All time)
         const [logs] = await db.query(`
             SELECT SUM(TotalCost) as TotalCost 
             FROM InventoryLogs 
-            WHERE (Type = 'IMPORT' OR Type = 'INITIAL_STOCK') AND CreatedAt >= ? AND CreatedAt <= ? AND ManagerID = ?
-        `, [start, end, req.userId]);
+            WHERE (Type = 'IMPORT' OR Type = 'INITIAL_STOCK') AND ManagerID = ?
+        `, [req.userId]);
         const totalCost = parseFloat(logs[0].TotalCost || 0);
 
         // 3. Generate chart data (Revenue vs Cost)
