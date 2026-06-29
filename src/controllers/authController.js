@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.login = async (req, res) => {
@@ -40,12 +41,15 @@ exports.login = async (req, res) => {
         }
 
         const resolvedUserId = (user.Role === 'staff' && user.ManagerID) ? user.ManagerID : user.UserID;
+        const sessionId = crypto.randomUUID();
 
         const token = jwt.sign(
-            { userId: resolvedUserId, staffId: user.UserID, role: user.Role },
+            { userId: resolvedUserId, staffId: user.UserID, role: user.Role, sessionId: sessionId },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        await pool.query('UPDATE Users SET CurrentSessionId = ? WHERE UserID = ?', [sessionId, user.UserID]);
 
         res.json({
             message: 'Đăng nhập thành công',
@@ -55,6 +59,19 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Lỗi server' });
+    }
+};
+
+exports.logout = async (req, res) => {
+    try {
+        const userId = req.staffId || req.userId;
+        if (userId) {
+            await pool.query('UPDATE Users SET CurrentSessionId = NULL WHERE UserID = ?', [userId]);
+        }
+        res.json({ success: true, message: 'Đăng xuất thành công' });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ message: 'Lỗi server khi đăng xuất' });
     }
 };
 

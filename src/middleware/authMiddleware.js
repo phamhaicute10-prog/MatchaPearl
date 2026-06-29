@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
+const pool = require('../config/db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'matchapearl_secret_key';
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     // Các đường dẫn được phép truy cập không cần token
     const publicPaths = [
         '/api/login',
@@ -34,7 +35,16 @@ const verifyToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        // Gán thông tin t? token vào request
+
+        // Kiểm tra Single Session cho Admin / Staff
+        if (decoded.sessionId && decoded.staffId) {
+            const [rows] = await pool.query('SELECT CurrentSessionId FROM Users WHERE UserID = ?', [decoded.staffId]);
+            if (rows.length > 0 && rows[0].CurrentSessionId !== decoded.sessionId) {
+                return res.status(401).json({ success: false, message: 'Tài khoản của bạn đã được đăng nhập ở thiết bị khác' });
+            }
+        }
+
+        // Gán thông tin từ token vào request
         if (decoded.userId) req.userId = decoded.userId;
         if (decoded.staffId) req.staffId = decoded.staffId;
         if (decoded.role) req.role = decoded.role;

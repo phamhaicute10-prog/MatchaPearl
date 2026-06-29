@@ -27,6 +27,7 @@ const upload = multer({ storage: storage });
 
 // Auth Routes
 router.post('/login', authController.login);
+router.post('/logout', authController.logout);
 router.post('/register', authController.register);
 router.put('/update-profile', upload.single('avatar'), authController.updateProfile);
 router.put('/change-password', authController.changePassword);
