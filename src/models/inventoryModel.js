@@ -105,6 +105,22 @@ class InventoryModel {
         );
         return result.affectedRows;
     }
+
+    static async getImportHistory(managerId) {
+        const [rows] = await db.query(`
+            SELECT 
+                l.LogID, 
+                i.Name as IngredientName, 
+                l.ChangeAmount as Amount, 
+                l.TotalCost, 
+                l.CreatedAt 
+            FROM InventoryLogs l
+            JOIN Ingredients i ON l.IngredientID = i.IngredientID
+            WHERE l.ManagerID = ? AND l.Type = 'IMPORT'
+            ORDER BY l.CreatedAt DESC
+        `, [managerId]);
+        return rows;
+    }
 }
 
 module.exports = InventoryModel;

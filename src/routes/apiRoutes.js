@@ -68,6 +68,7 @@ router.get('/reports/overview', dashboardController.getOverviewData);
 
 
 // Inventory Routes
+router.get('/inventory/import-history', inventoryController.getImportHistory);
 router.get('/inventory/ingredients', inventoryController.getIngredients);
 router.post('/inventory/ingredients', inventoryController.addIngredient);
 router.put('/inventory/ingredients/:id', inventoryController.updateIngredient);

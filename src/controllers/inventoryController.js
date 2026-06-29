@@ -97,3 +97,13 @@ exports.deleteRecipe = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+exports.getImportHistory = async (req, res) => {
+    try {
+        const managerId = req.userId;
+        const rows = await InventoryModel.getImportHistory(managerId);
+        res.json({ success: true, history: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
