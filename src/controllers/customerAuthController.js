@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.register = async (req, res) => {
@@ -34,11 +35,15 @@ exports.register = async (req, res) => {
             [managerId, fullName, phone, email, hashedPassword]
         );
 
+        const sessionId = crypto.randomUUID();
+
         const token = jwt.sign(
-            { customerId: result.insertId, role: 'customer' },
+            { customerId: result.insertId, role: 'customer', sessionId: sessionId },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        await pool.query('UPDATE Customers SET CurrentSessionId = ? WHERE CustomerID = ?', [sessionId, result.insertId]);
 
         res.status(201).json({
             success: true,
@@ -101,11 +106,15 @@ exports.login = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác' });
         }
 
+        const sessionId = crypto.randomUUID();
+
         const token = jwt.sign(
-            { customerId: customer.CustomerID, role: 'customer' },
+            { customerId: customer.CustomerID, role: 'customer', sessionId: sessionId },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        await pool.query('UPDATE Customers SET CurrentSessionId = ? WHERE CustomerID = ?', [sessionId, customer.CustomerID]);
 
         res.json({
             success: true,
@@ -186,6 +195,19 @@ exports.updateMe = async (req, res) => {
     }
 };
 
+exports.logout = async (req, res) => {
+    try {
+        const customerId = req.customerId;
+        if (customerId) {
+            await pool.query('UPDATE Customers SET CurrentSessionId = NULL WHERE CustomerID = ?', [customerId]);
+        }
+        res.json({ success: true, message: 'Đăng xuất thành công' });
+    } catch (error) {
+        console.error('Customer logout error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng xuất' });
+    }
+};
+
 exports.updatePassword = async (req, res) => {
     try {
         const customerId = req.customerId;
@@ -260,6 +282,19 @@ exports.forgotPassword = async (req, res) => {
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
+    }
+};
+
+exports.logout = async (req, res) => {
+    try {
+        const customerId = req.customerId;
+        if (customerId) {
+            await pool.query('UPDATE Customers SET CurrentSessionId = NULL WHERE CustomerID = ?', [customerId]);
+        }
+        res.json({ success: true, message: 'Đăng xuất thành công' });
+    } catch (error) {
+        console.error('Customer logout error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng xuất' });
     }
 };
 

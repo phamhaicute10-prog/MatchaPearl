@@ -44,6 +44,14 @@ const verifyToken = async (req, res, next) => {
             }
         }
 
+        // Kiểm tra Single Session cho Customer
+        if (decoded.sessionId && decoded.customerId) {
+            const [rows] = await pool.query('SELECT CurrentSessionId FROM Customers WHERE CustomerID = ?', [decoded.customerId]);
+            if (rows.length > 0 && rows[0].CurrentSessionId !== decoded.sessionId) {
+                return res.status(401).json({ success: false, message: 'Tài khoản của bạn đã được đăng nhập ở thiết bị khác' });
+            }
+        }
+
         // Gán thông tin từ token vào request
         if (decoded.userId) req.userId = decoded.userId;
         if (decoded.staffId) req.staffId = decoded.staffId;

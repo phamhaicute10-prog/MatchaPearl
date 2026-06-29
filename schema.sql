@@ -48,7 +48,8 @@ CREATE TABLE `customers` (
   `CreatedAt` datetime DEFAULT current_timestamp(),
   `Email` varchar(100) DEFAULT NULL,
   `PasswordHash` varchar(255) DEFAULT NULL,
-  `MembershipLevel` varchar(50) DEFAULT '─Éß╗ông',
+  `MembershipLevel` varchar(50) DEFAULT 'Đồng',
+  `CurrentSessionId` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`CustomerID`),
   UNIQUE KEY `unique_phone_manager` (`Phone`,`ManagerID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
