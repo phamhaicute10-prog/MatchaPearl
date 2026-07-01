@@ -40,6 +40,7 @@ class OrderModel {
             } else if (isStandaloneTopping) {
                  const toppingId = -item.productId - 1000;
                  processedToppings.push({ toppingId: toppingId, price: basePrice });
+                 toppingsTotal = basePrice;
                  basePrice = 0; 
             }
 
