@@ -84,12 +84,14 @@ exports.getDashboardData = async (req, res) => {
 
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-        // Get all completed orders within the month
+        const minDate = startOfWeek < startOfMonth ? startOfWeek : startOfMonth;
+
+        // Get all completed orders within the relevant period
         const [orders] = await db.query(`
             SELECT TotalAmount, CreatedAt
             FROM Orders 
             WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND UserID = ?
-        `, [startOfMonth, req.userId]);
+        `, [minDate, req.userId]);
 
         let todayRevenue = 0;
         let weekRevenue = 0;
@@ -100,7 +102,9 @@ exports.getDashboardData = async (req, res) => {
             const amount = parseFloat(order.TotalAmount);
             const createdAt = new Date(order.CreatedAt);
 
-            monthRevenue += amount;
+            if (createdAt >= startOfMonth) {
+                monthRevenue += amount;
+            }
 
             if (createdAt >= startOfWeek) {
                 weekRevenue += amount;
