@@ -244,12 +244,15 @@ exports.forgotPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email' });
         }
 
-        const [rows] = await pool.query('SELECT PasswordHash FROM Customers WHERE Email = ?', [email]);
+        const [rows] = await pool.query('SELECT CustomerID FROM Customers WHERE Email = ?', [email]);
         if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Email không tồn tại trong hệ thống' });
         }
 
         const customer = rows[0];
+        const newPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [hashedPassword, customer.CustomerID]);
         const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
 
         if (!scriptUrl) {
@@ -266,7 +269,7 @@ exports.forgotPassword = async (req, res) => {
             body: JSON.stringify({
                 to: email,
                 subject: "Khôi phục mật khẩu - Matcha Pearl App",
-                html: `<p>Xin chào,</p><p>Bạn đã yêu cầu khôi phục mật khẩu cho ứng dụng <b>Matcha Pearl App</b>.</p><p>Mật khẩu hiện tại của bạn là: <b>${customer.PasswordHash}</b></p><p>Vui lòng đăng nhập bằng mật khẩu này và đổi mật khẩu mới để bảo vệ tài khoản.</p>`
+                html: `<p>Xin chào,</p><p>Bạn đã yêu cầu khôi phục mật khẩu cho ứng dụng <b>Matcha Pearl App</b>.</p><p>Mật khẩu mới của bạn là: <b>${newPassword}</b></p><p>Vui lòng đăng nhập bằng mật khẩu này và đổi mật khẩu mới để bảo vệ tài khoản.</p>`
             })
         });
 
