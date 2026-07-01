@@ -151,22 +151,25 @@ exports.updateProfile = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
     try {
-        const { userId, oldPassword, newPassword } = req.body;
+        let { userId, oldPassword, newPassword } = req.body;
         
         if (!userId || !oldPassword || !newPassword) {
             return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
         }
 
+        oldPassword = oldPassword.trim();
+        newPassword = newPassword.trim();
+
         // Verify old password
         const [rows] = await pool.query('SELECT Password FROM Users WHERE UserID = ?', [userId]);
         
         if (rows.length === 0) {
-            return res.status(401).json({ message: 'Người dùng không tồn tại' });
+            return res.status(404).json({ message: 'Người dùng không tồn tại' });
         }
 
         const isMatch = await bcrypt.compare(oldPassword, rows[0].Password);
         if (!isMatch) {
-            return res.status(401).json({ message: 'Mật khẩu cũ không chính xác' });
+            return res.status(400).json({ message: 'Mật khẩu cũ không chính xác' });
         }
 
         // Update to new password
