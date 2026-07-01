@@ -158,14 +158,20 @@ exports.changePassword = async (req, res) => {
         }
 
         // Verify old password
-        const [rows] = await pool.query('SELECT UserID FROM Users WHERE UserID = ? AND Password = ?', [userId, oldPassword]);
+        const [rows] = await pool.query('SELECT Password FROM Users WHERE UserID = ?', [userId]);
         
         if (rows.length === 0) {
+            return res.status(401).json({ message: 'Người dùng không tồn tại' });
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, rows[0].Password);
+        if (!isMatch) {
             return res.status(401).json({ message: 'Mật khẩu cũ không chính xác' });
         }
 
         // Update to new password
-        await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [newPassword, userId]);
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [hashedNewPassword, userId]);
 
         res.json({ message: 'Đổi mật khẩu thành công' });
     } catch (error) {

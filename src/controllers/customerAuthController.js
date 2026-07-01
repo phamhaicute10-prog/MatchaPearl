@@ -220,15 +220,18 @@ exports.updatePassword = async (req, res) => {
 
         const [rows] = await pool.query('SELECT PasswordHash FROM Customers WHERE CustomerID = ?', [customerId]);
         if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+            return res.status(404).json({ success: false, message: 'Khách hàng không tồn tại' });
         }
 
-        const currentPassword = rows[0].PasswordHash;
-        if (currentPassword !== oldPassword) {
-            return res.status(400).json({ success: false, message: 'Mật khẩu cũ không chính xác' });
+        const currentPasswordHash = rows[0].PasswordHash;
+        const isMatch = await bcrypt.compare(oldPassword, currentPasswordHash);
+        
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Mật khẩu cũ không đúng' });
         }
 
-        await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [newPassword, customerId]);
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [hashedNewPassword, customerId]);
 
         res.json({ success: true, message: 'Đổi mật khẩu thành công' });
     } catch (err) {
