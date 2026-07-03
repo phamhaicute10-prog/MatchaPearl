@@ -1,8 +1,8 @@
-const db = require('../config/db');
+const CustomerProductModel = require('../models/customerProductModel');
 
 exports.getPublicCategories = async (req, res) => {
     try {
-        const [categories] = await db.query('SELECT * FROM Categories');
+        const categories = await CustomerProductModel.getPublicCategories();
         res.json(categories);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -11,12 +11,7 @@ exports.getPublicCategories = async (req, res) => {
 
 exports.getPublicProducts = async (req, res) => {
     try {
-        const [products] = await db.query(`
-            SELECT p.*, c.CategoryName 
-            FROM Products p
-            LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
-            WHERE p.Status = 1
-        `);
+        const products = await CustomerProductModel.getPublicProducts();
         res.json(products);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -25,7 +20,7 @@ exports.getPublicProducts = async (req, res) => {
 
 exports.getPublicToppings = async (req, res) => {
     try {
-        const [toppings] = await db.query('SELECT * FROM Toppings WHERE Status = 1');
+        const toppings = await CustomerProductModel.getPublicToppings();
         res.json(toppings);
     } catch (err) {
         res.status(500).json({ error: err.message });

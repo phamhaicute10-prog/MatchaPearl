@@ -1,8 +1,8 @@
-const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
+const AuthModel = require('../models/authModel');
 
 exports.login = async (req, res) => {
     try {
@@ -11,13 +11,12 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
         }
 
-        const [rows] = await pool.query('SELECT UserID, Username, FullName, Phone, Email, Password, PayosClientId, PayosApiKey, PayosChecksumKey, Avatar, Role, ManagerID, Status FROM Users WHERE Username = ?', [username]);
+        const user = await AuthModel.getUserByUsername(username);
         
-        if (rows.length === 0) {
+        if (!user) {
             return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
         }
 
-        const user = rows[0];
         let isMatch = false;
 
         if (user.Password.startsWith('$2b$') || user.Password.startsWith('$2a$')) {
@@ -26,9 +25,8 @@ exports.login = async (req, res) => {
             // Lazy migration: Fallback to plain text
             isMatch = (password === user.Password);
             if (isMatch) {
-                // Mật khẩu đúng, băm lại và lưu vào DB
                 const hashedPwd = await bcrypt.hash(password, 10);
-                await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [hashedPwd, user.UserID]);
+                await AuthModel.updatePassword(user.UserID, hashedPwd);
             }
         }
 
@@ -49,7 +47,7 @@ exports.login = async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        await pool.query('UPDATE Users SET CurrentSessionId = ? WHERE UserID = ?', [sessionId, user.UserID]);
+        await AuthModel.updateSessionId(user.UserID, sessionId);
 
         res.json({
             message: 'Đăng nhập thành công',
@@ -66,7 +64,7 @@ exports.logout = async (req, res) => {
     try {
         const userId = req.staffId || req.userId;
         if (userId) {
-            await pool.query('UPDATE Users SET CurrentSessionId = NULL WHERE UserID = ?', [userId]);
+            await AuthModel.clearSessionId(userId);
         }
         res.json({ success: true, message: 'Đăng xuất thành công' });
     } catch (error) {
@@ -82,23 +80,21 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
         }
         
-        // Check if username exists
-        const [existing] = await pool.query('SELECT UserID FROM Users WHERE Username = ?', [username]);
-        if (existing.length > 0) {
+        const exists = await AuthModel.checkUsernameExists(username);
+        if (exists) {
             return res.status(409).json({ message: 'Tên đăng nhập đã tồn tại' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const [result] = await pool.query(
-            'INSERT INTO Users (Username, Password, FullName, Phone, Email) VALUES (?, ?, ?, ?, ?)',
-            [username, hashedPassword, fullName || null, phone || null, email || null]
-        );
+        const insertId = await AuthModel.createUser({
+            username, hashedPassword, fullName, phone, email
+        });
 
         res.status(201).json({
             message: 'Đăng ký thành công',
             user: {
-                UserID: result.insertId,
+                UserID: insertId,
                 Username: username,
                 FullName: fullName,
                 Phone: phone,
@@ -124,23 +120,14 @@ exports.updateProfile = async (req, res) => {
             return res.status(400).json({ message: 'Thiếu ID người dùng' });
         }
 
-        let query = 'UPDATE Users SET FullName = ?, Phone = ?, Email = ?, PayosClientId = ?, PayosApiKey = ?, PayosChecksumKey = ?';
-        let params = [fullName || null, phone || null, email || null, payosClientId || null, payosApiKey || null, payosChecksumKey || null];
-
-        if (req.file) {
-            query += ', Avatar = ?';
-            params.push(`/uploads/${req.file.filename}`);
-        }
-
-        query += ' WHERE UserID = ?';
-        params.push(userId);
-
-        await pool.query(query, params);
-        
         let avatarUrl = null;
         if (req.file) {
             avatarUrl = `/uploads/${req.file.filename}`;
         }
+
+        await AuthModel.updateProfile({
+            userId, fullName, phone, email, payosClientId, payosApiKey, payosChecksumKey, avatarUrl
+        });
 
         res.json({ message: 'Cập nhật thông tin thành công', avatarUrl: avatarUrl });
     } catch (error) {
@@ -160,21 +147,19 @@ exports.changePassword = async (req, res) => {
         oldPassword = oldPassword.trim();
         newPassword = newPassword.trim();
 
-        // Verify old password
-        const [rows] = await pool.query('SELECT Password FROM Users WHERE UserID = ?', [userId]);
+        const dbPassword = await AuthModel.getUserPassword(userId);
         
-        if (rows.length === 0) {
+        if (!dbPassword) {
             return res.status(404).json({ message: 'Người dùng không tồn tại' });
         }
 
-        const isMatch = await bcrypt.compare(oldPassword, rows[0].Password);
+        const isMatch = await bcrypt.compare(oldPassword, dbPassword);
         if (!isMatch) {
             return res.status(400).json({ message: 'Mật khẩu cũ không chính xác' });
         }
 
-        // Update to new password
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [hashedNewPassword, userId]);
+        await AuthModel.updatePassword(userId, hashedNewPassword);
 
         res.json({ message: 'Đổi mật khẩu thành công' });
     } catch (error) {
@@ -190,17 +175,14 @@ exports.forgotPassword = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng nhập địa chỉ email' });
         }
 
-        const [rows] = await pool.query('SELECT UserID, Username FROM Users WHERE Email = ?', [email]);
-        if (rows.length === 0) {
+        const user = await AuthModel.getUserByEmail(email);
+        if (!user) {
             return res.status(404).json({ message: 'Email không tồn tại trong hệ thống' });
         }
 
-        const user = rows[0];
-        
         const newPassword = Math.random().toString(36).slice(-8);
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE Users SET Password = ? WHERE UserID = ?', [hashedPassword, user.UserID]);
-
+        await AuthModel.updatePassword(user.UserID, hashedPassword);
         
         const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
 

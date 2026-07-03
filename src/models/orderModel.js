@@ -113,6 +113,26 @@ class OrderModel {
         return { originalTotalAmount, finalTotalAmount, discountAmount, processedItems };
     }
 
+    static async calculateOrder(managerId, items, voucherId) {
+        let connection;
+        try {
+            connection = await db.getConnection();
+            const { finalTotalAmount, processedItems } = await this.calculateOrderData(connection, managerId, items, voucherId);
+            
+            let discountAmount = 0;
+            let originalTotalAmount = 0;
+            for (const item of processedItems) {
+                originalTotalAmount += item.subTotal;
+            }
+            discountAmount = originalTotalAmount - finalTotalAmount;
+            if (discountAmount < 0) discountAmount = 0;
+
+            return { finalTotalAmount, originalTotalAmount, discountAmount };
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
     static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED', customerId = null, pointsUsed = 0, orderType = 'Tại chỗ') {
         let connection;
         try {

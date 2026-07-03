@@ -1,8 +1,8 @@
-const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
+const CustomerAuthModel = require('../models/customerAuthModel');
 
 exports.register = async (req, res) => {
     try {
@@ -12,44 +12,38 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin' });
         }
 
-        // Kiểm tra số điện thoại hoặc email đã tồn tại trong bảng Customers chưa
-        const [existing] = await pool.query('SELECT CustomerID FROM Customers WHERE Phone = ? OR Email = ?', [phone, email]);
-        if (existing.length > 0) {
+        const phoneOrEmailExists = await CustomerAuthModel.checkPhoneOrEmailExists(phone, email);
+        if (phoneOrEmailExists) {
             return res.status(409).json({ success: false, message: 'Số điện thoại hoặc Email đã được sử dụng' });
         }
 
-        // Kiểm tra xem email có thuộc về tài khoản Nhân viên/Admin không
-        const [existingUser] = await pool.query('SELECT UserID FROM Users WHERE Email = ?', [email]);
-        if (existingUser.length > 0) {
+        const emailInUsers = await CustomerAuthModel.checkEmailInUsers(email);
+        if (emailInUsers) {
             return res.status(409).json({ success: false, message: 'Email này đã được sử dụng cho tài khoản nội bộ. Vui lòng dùng email khác.' });
         }
 
-        // Tạm thời lấy ManagerID đầu tiên làm mặc định (vì chuỗi 1 cửa hàng)
-        const [managers] = await pool.query("SELECT UserID FROM Users WHERE Role = 'admin' OR Role = 'manager' LIMIT 1");
-        const managerId = managers.length > 0 ? managers[0].UserID : 0;
-
+        const managerId = await CustomerAuthModel.getFirstAdminManagerId();
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const [result] = await pool.query(
-            "INSERT INTO Customers (ManagerID, FullName, Phone, Email, PasswordHash, TotalPoints, MembershipLevel) VALUES (?, ?, ?, ?, ?, 0, 'Đồng')",
-            [managerId, fullName, phone, email, hashedPassword]
-        );
+        const customerId = await CustomerAuthModel.createCustomer({
+            managerId, fullName, phone, email, hashedPassword
+        });
 
         const sessionId = crypto.randomUUID();
 
         const token = jwt.sign(
-            { customerId: result.insertId, role: 'customer', sessionId: sessionId },
+            { customerId: customerId, role: 'customer', sessionId: sessionId },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
 
-        await pool.query('UPDATE Customers SET CurrentSessionId = ? WHERE CustomerID = ?', [sessionId, result.insertId]);
+        await CustomerAuthModel.updateSessionId(customerId, sessionId);
 
         res.status(201).json({
             success: true,
             message: 'Đăng ký thành công',
             customer: {
-                CustomerID: result.insertId,
+                CustomerID: customerId,
                 FullName: fullName,
                 Phone: phone,
                 Email: email,
@@ -71,23 +65,12 @@ exports.login = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng nhập email và mật khẩu' });
         }
 
-        const [rows] = await pool.query(
-            `SELECT CustomerID, FullName, Phone, Email, TotalPoints, 
-                    CASE 
-                        WHEN TotalPoints >= 60 THEN 'Vàng'
-                        WHEN TotalPoints >= 30 THEN 'Bạc'
-                        ELSE 'Đồng'
-                    END AS MembershipLevel, 
-                    Birthday, Gender, PasswordHash 
-             FROM Customers WHERE Email = ?`,
-            [email]
-        );
+        const customer = await CustomerAuthModel.getCustomerByEmail(email);
 
-        if (rows.length === 0) {
+        if (!customer) {
             return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác' });
         }
 
-        const customer = rows[0];
         let isMatch = false;
 
         if (customer.PasswordHash && (customer.PasswordHash.startsWith('$2b$') || customer.PasswordHash.startsWith('$2a$'))) {
@@ -96,9 +79,8 @@ exports.login = async (req, res) => {
             // Lazy migration: Fallback to plain text
             isMatch = (password === customer.PasswordHash);
             if (isMatch) {
-                // Băm lại và lưu
                 const hashedPwd = await bcrypt.hash(password, 10);
-                await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [hashedPwd, customer.CustomerID]);
+                await CustomerAuthModel.updatePassword(customer.CustomerID, hashedPwd);
             }
         }
 
@@ -114,7 +96,7 @@ exports.login = async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        await pool.query('UPDATE Customers SET CurrentSessionId = ? WHERE CustomerID = ?', [sessionId, customer.CustomerID]);
+        await CustomerAuthModel.updateSessionId(customer.CustomerID, sessionId);
 
         res.json({
             success: true,
@@ -130,32 +112,21 @@ exports.login = async (req, res) => {
 
 exports.getMe = async (req, res) => {
     try {
-        // middleware JWT đã xử lý và gán req.customerId
         const customerId = req.customerId || req.customerId;
         
         if (!customerId) {
             return res.status(401).json({ success: false, message: 'Chưa xác thực' });
         }
 
-        const [rows] = await pool.query(
-            `SELECT CustomerID, FullName, Phone, Email, TotalPoints, 
-                    CASE 
-                        WHEN TotalPoints >= 60 THEN 'Vàng'
-                        WHEN TotalPoints >= 30 THEN 'Bạc'
-                        ELSE 'Đồng'
-                    END AS MembershipLevel, 
-                    Birthday, Gender 
-             FROM Customers WHERE CustomerID = ?`,
-            [customerId]
-        );
+        const customer = await CustomerAuthModel.getCustomerById(customerId);
 
-        if (rows.length === 0) {
+        if (!customer) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy khách hàng' });
         }
 
         res.json({
             success: true,
-            customer: rows[0]
+            customer: customer
         });
     } catch (err) {
         console.error('Get me error:', err);
@@ -173,20 +144,13 @@ exports.updateMe = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng điền đủ họ tên và số điện thoại' });
         }
 
-        // Kiểm tra email hoặc sđt bị trùng với khách hàng KHÁC không
-        if (email) {
-            const [existing] = await pool.query('SELECT CustomerID FROM Customers WHERE (Phone = ? OR Email = ?) AND CustomerID != ?', [phone, email, customerId]);
-            if (existing.length > 0) {
-                return res.status(409).json({ success: false, message: 'Số điện thoại hoặc Email đã được sử dụng bởi người khác' });
-            }
-        } else {
-            const [existing] = await pool.query('SELECT CustomerID FROM Customers WHERE Phone = ? AND CustomerID != ?', [phone, customerId]);
-            if (existing.length > 0) {
-                return res.status(409).json({ success: false, message: 'Số điện thoại đã được sử dụng bởi người khác' });
-            }
+        const exists = await CustomerAuthModel.checkOtherCustomerEmailPhone(phone, email, customerId);
+        
+        if (exists) {
+            return res.status(409).json({ success: false, message: 'Số điện thoại hoặc Email đã được sử dụng bởi người khác' });
         }
 
-        await pool.query('UPDATE Customers SET FullName = ?, Phone = ?, Email = ? WHERE CustomerID = ?', [fullName, phone, email, customerId]);
+        await CustomerAuthModel.updateProfile(customerId, fullName, phone, email);
 
         res.json({ success: true, message: 'Cập nhật thành công' });
     } catch (err) {
@@ -199,7 +163,7 @@ exports.logout = async (req, res) => {
     try {
         const customerId = req.customerId;
         if (customerId) {
-            await pool.query('UPDATE Customers SET CurrentSessionId = NULL WHERE CustomerID = ?', [customerId]);
+            await CustomerAuthModel.clearSessionId(customerId);
         }
         res.json({ success: true, message: 'Đăng xuất thành công' });
     } catch (error) {
@@ -221,12 +185,12 @@ exports.updatePassword = async (req, res) => {
         oldPassword = oldPassword.trim();
         newPassword = newPassword.trim();
 
-        const [rows] = await pool.query('SELECT PasswordHash FROM Customers WHERE CustomerID = ?', [customerId]);
-        if (rows.length === 0) {
+        const customer = await CustomerAuthModel.getCustomerById(customerId);
+        if (!customer) {
             return res.status(404).json({ success: false, message: 'Khách hàng không tồn tại' });
         }
 
-        const currentPasswordHash = rows[0].PasswordHash;
+        const currentPasswordHash = customer.PasswordHash;
         const isMatch = await bcrypt.compare(oldPassword, currentPasswordHash);
         
         if (!isMatch) {
@@ -234,7 +198,7 @@ exports.updatePassword = async (req, res) => {
         }
 
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [hashedNewPassword, customerId]);
+        await CustomerAuthModel.updatePassword(customerId, hashedNewPassword);
 
         res.json({ success: true, message: 'Đổi mật khẩu thành công' });
     } catch (err) {
@@ -250,15 +214,15 @@ exports.forgotPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email' });
         }
 
-        const [rows] = await pool.query('SELECT CustomerID FROM Customers WHERE Email = ?', [email]);
-        if (rows.length === 0) {
+        const customer = await CustomerAuthModel.getCustomerByEmail(email);
+        if (!customer) {
             return res.status(404).json({ success: false, message: 'Email không tồn tại trong hệ thống' });
         }
 
-        const customer = rows[0];
         const newPassword = Math.random().toString(36).slice(-8);
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE Customers SET PasswordHash = ? WHERE CustomerID = ?', [hashedPassword, customer.CustomerID]);
+        await CustomerAuthModel.updatePassword(customer.CustomerID, hashedPassword);
+        
         const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
 
         if (!scriptUrl) {
@@ -291,19 +255,6 @@ exports.forgotPassword = async (req, res) => {
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
-    }
-};
-
-exports.logout = async (req, res) => {
-    try {
-        const customerId = req.customerId;
-        if (customerId) {
-            await pool.query('UPDATE Customers SET CurrentSessionId = NULL WHERE CustomerID = ?', [customerId]);
-        }
-        res.json({ success: true, message: 'Đăng xuất thành công' });
-    } catch (error) {
-        console.error('Customer logout error:', error);
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng xuất' });
     }
 };
 

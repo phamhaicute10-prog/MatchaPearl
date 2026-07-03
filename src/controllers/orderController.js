@@ -13,31 +13,17 @@ exports.createOrder = async (req, res) => {
 };
 
 exports.calculateOrder = async (req, res) => {
-    let connection;
     try {
         const { items, voucherId } = req.body;
-        connection = await require('../config/db').getConnection();
         const managerId = req.userId;
-        const { finalTotalAmount, processedItems } = await OrderModel.calculateOrderData(connection, managerId, items, voucherId);
-        
-        let discountAmount = 0;
-        let originalTotalAmount = 0;
-        for (const item of processedItems) {
-            originalTotalAmount += item.subTotal;
-        }
-        discountAmount = originalTotalAmount - finalTotalAmount;
-        if (discountAmount < 0) discountAmount = 0;
+        const result = await OrderModel.calculateOrder(managerId, items, voucherId);
 
         res.status(200).json({ 
             success: true, 
-            finalTotalAmount, 
-            originalTotalAmount, 
-            discountAmount 
+            ...result
         });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
-    } finally {
-        if (connection) connection.release();
     }
 };
 
