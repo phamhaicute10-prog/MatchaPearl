@@ -14,9 +14,22 @@ class CustomerOrderModel {
             const [custRows] = await connection.query('SELECT ManagerID FROM Customers WHERE CustomerID = ?', [customerId]);
             let managerId = custRows.length > 0 ? custRows[0].ManagerID : null;
 
+            // Xác thực xem managerId có thật sự tồn tại trong Users không (tránh lỗi khóa ngoại nếu user bị xóa)
+            if (managerId) {
+                const [checkUser] = await connection.query('SELECT UserID FROM Users WHERE UserID = ?', [managerId]);
+                if (checkUser.length === 0) {
+                    managerId = null; 
+                }
+            }
+
             if (!managerId) {
                 const [managers] = await connection.query("SELECT UserID FROM Users WHERE Role = 'admin' ORDER BY UserID ASC LIMIT 1");
                 managerId = managers.length > 0 ? managers[0].UserID : null;
+                
+                // Cập nhật lại ManagerID cho Customer nếu tìm thấy admin hợp lệ
+                if (managerId) {
+                    await connection.query('UPDATE Customers SET ManagerID = ? WHERE CustomerID = ?', [managerId, customerId]);
+                }
             }
 
             if (!managerId) throw new Error('Không tìm thấy quản lý hợp lệ để tạo đơn hàng');
