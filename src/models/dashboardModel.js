@@ -4,7 +4,7 @@ class DashboardModel {
     // ---- Dashboard Screen Data ----
     static async getCompletedOrdersByDateRange(start, end, managerId) {
         const [orders] = await db.query(`
-            SELECT FinalAmount as TotalAmount 
+            SELECT FinalAmount as TotalAmount, CreatedAt 
             FROM Orders 
             WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt <= ? AND UserID = ?
         `, [start, end, managerId]);
