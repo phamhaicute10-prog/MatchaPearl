@@ -156,18 +156,20 @@ class OrderModel {
             let pointsEarned = 0;
             if (customerId) {
                 pointsEarned = Math.floor(finalTotalAmount / 10000);
-                if (pointsEarned > 0) {
-                    await connection.query('UPDATE Customers SET TotalPoints = TotalPoints + ? WHERE CustomerID = ?', [pointsEarned, customerId]);
-                }
             }
 
             const totalDiscountAmount = originalTotalAmount - (finalTotalAmount + discountFromPoints);
 
             const [orderResult] = await connection.query(
                 'INSERT INTO Orders (UserID, TotalAmount, FinalAmount, DiscountAmount, PaymentMethod, Status, CreatedBy, CustomerID, PointsEarned, PointsUsed, DiscountFromPoints, OrderType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [managerId, originalTotalAmount, finalTotalAmount, totalDiscountAmount > 0 ? totalDiscountAmount : 0, paymentMethod, 'IN_PROGRESS', staffId, customerId, pointsEarned, pointsUsed, discountFromPoints, orderType]
+                [managerId, originalTotalAmount, finalTotalAmount, totalDiscountAmount > 0 ? totalDiscountAmount : 0, paymentMethod, status, staffId, customerId, pointsEarned, pointsUsed, discountFromPoints, orderType]
             );
             const orderId = orderResult.insertId;
+
+            if (customerId && pointsEarned > 0) {
+                await connection.query('UPDATE Customers SET TotalPoints = TotalPoints + ? WHERE CustomerID = ?', [pointsEarned, customerId]);
+                await connection.query("INSERT INTO PointHistory (CustomerID, PointsChange, Type, Reason) VALUES (?, ?, 'Tích điểm', ?)", [customerId, pointsEarned, 'Mua hàng POS: ORD-' + orderId]);
+            }
 
             for (const item of processedItems) {
                 const [itemResult] = await connection.query(
@@ -195,14 +197,16 @@ class OrderModel {
                 }
 
                 // Deduct stock for products
-                const [productRecipes] = await connection.query('SELECT IngredientID, Amount FROM Recipes WHERE ProductID = ? AND ManagerID = ?', [item.productId, managerId]);
-                for (const recipe of productRecipes) {
-                    const totalDeduct = recipe.Amount * item.quantity;
-                    const [updateResult] = await connection.query('UPDATE Ingredients SET CurrentStock = CurrentStock - ? WHERE IngredientID = ? AND ManagerID = ? AND CurrentStock >= ?', [totalDeduct, recipe.IngredientID, managerId, totalDeduct]);
-                    if (updateResult.affectedRows === 0) {
-                        throw new Error('Không đủ nguyên liệu trong kho để hoàn tất đơn hàng!');
+                if (!item.isStandaloneTopping && item.productId) {
+                    const [productRecipes] = await connection.query('SELECT IngredientID, Amount FROM Recipes WHERE ProductID = ? AND ManagerID = ?', [item.productId, managerId]);
+                    for (const recipe of productRecipes) {
+                        const totalDeduct = recipe.Amount * item.quantity;
+                        const [updateResult] = await connection.query('UPDATE Ingredients SET CurrentStock = CurrentStock - ? WHERE IngredientID = ? AND ManagerID = ? AND CurrentStock >= ?', [totalDeduct, recipe.IngredientID, managerId, totalDeduct]);
+                        if (updateResult.affectedRows === 0) {
+                            throw new Error('Không đủ nguyên liệu trong kho để hoàn tất đơn hàng!');
+                        }
+                        await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, \'SALE\', ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
                     }
-                    await connection.query('INSERT INTO InventoryLogs (IngredientID, ChangeAmount, Type, ReferenceID, ManagerID, CreatedBy) VALUES (?, ?, \'SALE\', ?, ?, ?)', [recipe.IngredientID, -totalDeduct, orderId, managerId, staffId]);
                 }
             }
 
