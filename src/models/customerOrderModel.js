@@ -10,8 +10,9 @@ class CustomerOrderModel {
             connection = await db.getConnection();
             await connection.beginTransaction();
 
-            const [managers] = await connection.query("SELECT UserID FROM Users WHERE Role = 'admin' ORDER BY UserID DESC LIMIT 1");
-            const managerId = managers.length > 0 ? managers[0].UserID : 0;
+            // Lấy ManagerID từ khách hàng hiện tại
+            const [custRows] = await connection.query('SELECT ManagerID FROM Customers WHERE CustomerID = ?', [customerId]);
+            const managerId = custRows.length > 0 ? custRows[0].ManagerID : 0;
 
             const { finalTotalAmount, processedItems } = await OrderModel.calculateOrderData(connection, managerId, items, voucherId);
             

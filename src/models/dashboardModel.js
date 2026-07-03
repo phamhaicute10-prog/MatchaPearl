@@ -4,7 +4,7 @@ class DashboardModel {
     // ---- Dashboard Screen Data ----
     static async getCompletedOrdersByDateRange(start, end, managerId) {
         const [orders] = await db.query(`
-            SELECT TotalAmount 
+            SELECT FinalAmount as TotalAmount 
             FROM Orders 
             WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt <= ? AND UserID = ?
         `, [start, end, managerId]);
@@ -13,7 +13,7 @@ class DashboardModel {
 
     static async getDailyRevenue(startDay, endDay, managerId) {
         const [dayOrders] = await db.query(`
-            SELECT SUM(TotalAmount) as revenue
+            SELECT SUM(FinalAmount) as revenue
             FROM Orders
             WHERE Status = 'COMPLETED' AND CreatedAt >= ? AND CreatedAt < ? AND UserID = ?
         `, [startDay, endDay, managerId]);
@@ -43,7 +43,7 @@ class DashboardModel {
     // ---- Overview Screen Data ----
     static async getTotalRevenueAllTime(managerId) {
         const [orders] = await db.query(`
-            SELECT SUM(TotalAmount) as TotalRevenue 
+            SELECT SUM(FinalAmount) as TotalRevenue 
             FROM Orders 
             WHERE Status = 'COMPLETED' AND UserID = ?
         `, [managerId]);

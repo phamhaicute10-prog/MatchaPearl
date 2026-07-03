@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+process.env.TZ = 'Asia/Ho_Chi_Minh';
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const apiRoutes = require('./routes/apiRoutes');
