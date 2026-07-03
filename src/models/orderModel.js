@@ -133,7 +133,7 @@ class OrderModel {
         }
     }
 
-    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'COMPLETED', customerId = null, pointsUsed = 0, orderType = 'Tại chỗ') {
+    static async createOrder(managerId, staffId, paymentMethod, items, voucherId, status = 'IN_PROGRESS', customerId = null, pointsUsed = 0, orderType = 'Tại chỗ') {
         let connection;
         try {
             connection = await db.getConnection();

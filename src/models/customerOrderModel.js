@@ -12,7 +12,14 @@ class CustomerOrderModel {
 
             // Lấy ManagerID từ khách hàng hiện tại
             const [custRows] = await connection.query('SELECT ManagerID FROM Customers WHERE CustomerID = ?', [customerId]);
-            const managerId = custRows.length > 0 ? custRows[0].ManagerID : 0;
+            let managerId = custRows.length > 0 ? custRows[0].ManagerID : null;
+
+            if (!managerId) {
+                const [managers] = await connection.query("SELECT UserID FROM Users WHERE Role = 'admin' ORDER BY UserID ASC LIMIT 1");
+                managerId = managers.length > 0 ? managers[0].UserID : null;
+            }
+
+            if (!managerId) throw new Error('Không tìm thấy quản lý hợp lệ để tạo đơn hàng');
 
             const { finalTotalAmount, processedItems } = await OrderModel.calculateOrderData(connection, managerId, items, voucherId);
             
